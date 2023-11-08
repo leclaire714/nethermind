@@ -45,9 +45,8 @@ namespace Nethermind.Merge.Plugin.Test
             _context.BlockProcessingQueue?.IsEmpty.Returns(true);
             _context.MemDbFactory = new MemDbFactory();
             _context.BlockProducerEnvFactory = new BlockProducerEnvFactory(
-                _context.DbProvider!,
+                _context.ReadOnlyWorldStateFactory!,
                 _context.BlockTree!,
-                _context.ReadOnlyTrieStore!,
                 _context.SpecProvider!,
                 _context.BlockValidator!,
                 _context.RewardCalculatorSource!,
