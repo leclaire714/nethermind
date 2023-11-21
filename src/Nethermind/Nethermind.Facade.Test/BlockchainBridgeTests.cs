@@ -72,6 +72,7 @@ namespace Nethermind.Facade.Test
                 false,
                 new ReadOnlyDbProvider(_dbProvider, true),
                 _specProvider,
+                _blockTree.GetReadOnlyBlockCache(),
                 LimboLogs.Instance);
 
             processingEnv.TransactionProcessor = _transactionProcessor;
@@ -223,6 +224,7 @@ namespace Nethermind.Facade.Test
                 false,
                 new ReadOnlyDbProvider(_dbProvider, true),
                 _specProvider,
+                _blockTree.GetReadOnlyBlockCache(),
                 LimboLogs.Instance);
 
             Block head = Build.A.Block.WithNumber(headNumber).TestObject;

@@ -96,6 +96,11 @@ namespace Nethermind.Blockchain
 
         public long BestKnownBeaconNumber { get; private set; }
 
+        public ICache<ValueHash256, Block> GetReadOnlyBlockCache()
+        {
+            return _blockStore.GetNonDestructiveCacheOverlay();
+        }
+
         public ulong NetworkId => _specProvider.NetworkId;
 
         public ulong ChainId => _specProvider.ChainId;

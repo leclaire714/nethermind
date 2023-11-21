@@ -135,6 +135,7 @@ namespace Nethermind.JsonRpc.Test.Modules
                 false,
                 new ReadOnlyDbProvider(dbProvider, true),
                 SpecProvider,
+                BlockTree.GetReadOnlyBlockCache(),
                 LimboLogs.Instance);
 
             ReceiptFinder ??= ReceiptStorage;

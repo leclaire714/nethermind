@@ -7,6 +7,7 @@ using System.Threading;
 using Nethermind.Abi;
 using Nethermind.Api.Extensions;
 using Nethermind.Blockchain;
+using Nethermind.Blockchain.Blocks;
 using Nethermind.Blockchain.Filters;
 using Nethermind.Blockchain.Find;
 using Nethermind.Blockchain.FullPruning;
@@ -83,6 +84,7 @@ namespace Nethermind.Api
         public IBlockchainBridge CreateBlockchainBridge()
         {
             ReadOnlyBlockTree readOnlyTree = BlockTree!.AsReadOnly();
+            var readOnlyCache = BlockTree!.GetReadOnlyBlockCache();
             LazyInitializer.EnsureInitialized(ref _readOnlyDbProvider, () => new ReadOnlyDbProvider(DbProvider, false));
             LazyInitializer.EnsureInitialized(ref _multiCallReadOnlyDbProvider, () => new ReadOnlyDbProvider(DbProvider, true));
 
@@ -97,6 +99,7 @@ namespace Nethermind.Api
             MultiCallReadOnlyBlocksProcessingEnv multiCallReadOnlyBlocksProcessingEnv = MultiCallReadOnlyBlocksProcessingEnv.Create(false,
                 _multiCallReadOnlyDbProvider,
                 SpecProvider,
+                readOnlyCache,
                 LogManager);
 
 

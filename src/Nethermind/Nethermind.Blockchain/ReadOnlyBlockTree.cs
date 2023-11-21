@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nethermind.Blockchain.Visitors;
 using Nethermind.Core;
+using Nethermind.Core.Caching;
 using Nethermind.Core.Crypto;
 using Nethermind.Int256;
 
@@ -23,6 +24,11 @@ namespace Nethermind.Blockchain
         public ReadOnlyBlockTree(IBlockTree wrapped)
         {
             _wrapped = wrapped;
+        }
+
+        public ICache<ValueHash256, Block> GetReadOnlyBlockCache()
+        {
+            return _wrapped.GetReadOnlyBlockCache();
         }
 
         public ulong NetworkId => _wrapped.NetworkId;

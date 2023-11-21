@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using Nethermind.Core;
+using Nethermind.Core.Caching;
 using Nethermind.Core.Crypto;
 using Nethermind.Serialization.Rlp;
 
@@ -19,7 +20,7 @@ public interface IBlockStore
     ReceiptRecoveryBlock? GetReceiptRecoveryBlock(long blockNumber, Hash256 blockHash);
     void Cache(Block block);
 
-
+    ICache<ValueHash256, Block> GetNonDestructiveCacheOverlay();
     // These two are used by blocktree. Try not to use them...
     void SetMetadata(byte[] key, byte[] value);
     byte[]? GetMetadata(byte[] key);

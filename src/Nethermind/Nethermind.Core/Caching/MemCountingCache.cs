@@ -6,11 +6,25 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Nethermind.Core.Crypto;
+using Newtonsoft.Json.Linq;
 
 namespace Nethermind.Core.Caching
 {
     public sealed class MemCountingCache : ICache<ValueHash256, byte[]>
     {
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public KeyValuePair<ValueHash256, byte[]>[] ToArray()
+        {
+            int i = 0;
+            KeyValuePair<ValueHash256, byte[]>[] array = new KeyValuePair<ValueHash256, byte[]>[_cacheMap.Count];
+            foreach (KeyValuePair<ValueHash256, LinkedListNode<LruCacheItem>> kvp in _cacheMap)
+            {
+                array[i++] = new KeyValuePair<ValueHash256, byte[]>(kvp.Key, kvp.Value.Value.Value);
+            }
+
+            return array;
+        }
+
         private readonly int _maxCapacity;
         private readonly Dictionary<ValueHash256, LinkedListNode<LruCacheItem>> _cacheMap;
         private LinkedListNode<LruCacheItem>? _leastRecentlyUsed;

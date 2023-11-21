@@ -18,12 +18,22 @@ public class BlockStore : IBlockStore
     private readonly BlockDecoder _blockDecoder = new();
     private const int CacheSize = 128 + 32;
 
-    private readonly LruCache<ValueHash256, Block>
-        _blockCache = new(CacheSize, CacheSize, "blocks");
+    private readonly ICache<ValueHash256, Block>
+        _blockCache = new LruCache<ValueHash256, Block>(CacheSize, CacheSize, "blocks");
 
     public BlockStore(IDb blockDb)
     {
         _blockDb = blockDb;
+    }
+    public BlockStore(IDb overlayBlockDb, ICache<ValueHash256, Block> overlayCache)
+    {
+        _blockDb = overlayBlockDb;
+        _blockCache = overlayCache;
+    }
+
+    public ICache<ValueHash256, Block> GetNonDestructiveCacheOverlay()
+    {
+        return new ReadOnlyOverlayCache<ValueHash256, Block>(_blockCache);
     }
 
     public void SetMetadata(byte[] key, byte[] value)

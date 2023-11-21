@@ -8,12 +8,14 @@ using System.Threading.Tasks;
 using Nethermind.Blockchain.Find;
 using Nethermind.Blockchain.Visitors;
 using Nethermind.Core;
+using Nethermind.Core.Caching;
 using Nethermind.Core.Crypto;
 
 namespace Nethermind.Blockchain
 {
     public interface IBlockTree : IBlockFinder
     {
+        ICache<ValueHash256, Block> GetReadOnlyBlockCache();
         /// <summary>
         /// Network ID that identifies the chain among the public and private chains (different IDs for mainnet, ETH classic, etc.)
         /// </summary>

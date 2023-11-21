@@ -10,6 +10,8 @@ using Nethermind.Blockchain.Synchronization;
 using Nethermind.Consensus.Processing;
 using Nethermind.Consensus.Rewards;
 using Nethermind.Consensus.Validators;
+using Nethermind.Core;
+using Nethermind.Core.Caching;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Specs;
 using Nethermind.Db;
@@ -32,18 +34,22 @@ public class MultiCallReadOnlyBlocksProcessingEnv : ReadOnlyTxProcessingEnvBase,
     public IVirtualMachine VirtualMachine { get; }
     public OverridableCodeInfoRepository CodeInfoRepository { get; }
     private readonly bool _doValidation = false;
+
+    private readonly ICache<ValueHash256, Block> _blocksOverlayCache;
     // We need ability to get many instances that do not conflict in terms of editable tmp storage - thus we implement env cloning
     public static MultiCallReadOnlyBlocksProcessingEnv Create(
         bool traceTransfers,
         IReadOnlyDbProvider readOnlyDbProvider,
         ISpecProvider? specProvider,
+        ICache<ValueHash256, Block> blocksOverlayCache,
         ILogManager? logManager = null,
-        bool doValidation = false)
+    bool doValidation = false)
     {
+
         IReadOnlyDbProvider dbProvider = new ReadOnlyDbProvider(readOnlyDbProvider, true);
         TrieStore trieStore = new(readOnlyDbProvider.StateDb, logManager);
 
-        IBlockStore blockStore = new BlockStore(dbProvider.BlocksDb);
+        IBlockStore blockStore = new BlockStore(dbProvider.BlocksDb, blocksOverlayCache);
         IHeaderStore headerStore = new HeaderStore(dbProvider.HeadersDb, dbProvider.BlockNumbersDb);
 
         BlockTree blockTree = new(blockStore,
@@ -62,12 +68,13 @@ public class MultiCallReadOnlyBlocksProcessingEnv : ReadOnlyTxProcessingEnvBase,
             trieStore,
             blockTree,
             specProvider,
+            blocksOverlayCache,
             logManager,
             doValidation);
     }
 
     public MultiCallReadOnlyBlocksProcessingEnv Clone(bool traceTransfers, bool doValidation) =>
-        Create(traceTransfers, DbProvider, SpecProvider, _logManager, doValidation);
+        Create(traceTransfers, DbProvider, SpecProvider, _blocksOverlayCache, _logManager, doValidation);
 
     private MultiCallReadOnlyBlocksProcessingEnv(
         bool traceTransfers,
@@ -75,10 +82,12 @@ public class MultiCallReadOnlyBlocksProcessingEnv : ReadOnlyTxProcessingEnvBase,
         ITrieStore trieStore,
         IBlockTree blockTree,
         ISpecProvider? specProvider,
+        ICache<ValueHash256, Block> blocksOverlayCache,
         ILogManager? logManager = null,
         bool doValidation = false)
         : base(readOnlyDbProvider, trieStore, blockTree, logManager)
     {
+        _blocksOverlayCache = blocksOverlayCache;
         _trieStore = trieStore;
         _logManager = logManager;
         SpecProvider = specProvider;

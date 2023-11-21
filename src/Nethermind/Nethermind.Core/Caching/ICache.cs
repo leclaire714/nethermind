@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System.Collections.Generic;
+
 namespace Nethermind.Core.Caching
 {
-    public interface ICache<in TKey, TValue>
+    public interface ICache<TKey, TValue>
     {
         void Clear();
         TValue? Get(TKey key);
@@ -24,5 +26,7 @@ namespace Nethermind.Core.Caching
         /// <returns>True if key existed in the cache, otherwise false.</returns>
         bool Delete(TKey key);
         bool Contains(TKey key);
+
+        KeyValuePair<TKey, TValue>[] ToArray();
     }
 }
