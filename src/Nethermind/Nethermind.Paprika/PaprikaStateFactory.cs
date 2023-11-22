@@ -24,6 +24,8 @@ public class PaprikaStateFactory : IStateFactory
     private readonly PagedDb _db;
     private readonly Blockchain _blockchain;
 
+    private long _lastFinalized;
+
     public PaprikaStateFactory(string directory)
     {
         _db = PagedDb.MemoryMappedDb(_sepolia, 64, directory, true);
@@ -81,7 +83,11 @@ public class PaprikaStateFactory : IStateFactory
         }
     }
 
-    public void Finalize(Keccak finalizedStateRoot) => _blockchain.Finalize(Convert(finalizedStateRoot));
+    public void Finalize(Keccak finalizedStateRoot, long finalizedNumber)
+    {
+        _blockchain.Finalize(Convert(finalizedStateRoot));
+        Volatile.Write(ref _lastFinalized, Math.Max(finalizedNumber, Volatile.Read(ref _lastFinalized)));
+    }
 
     class ReadOnlyState : IReadOnlyState
     {
@@ -115,7 +121,8 @@ public class PaprikaStateFactory : IStateFactory
             Span<byte> bytes = stackalloc byte[32];
             GetKey(cell.Index, bytes);
 
-            return _wrapped.GetStorage(Convert(cell.Address), new PaprikaKeccak(bytes), bytes).ToArray();
+            Span<byte> value = _wrapped.GetStorage(Convert(cell.Address), new PaprikaKeccak(bytes), bytes);
+            return value.IsEmpty ? new byte[] { 0 } : value.ToArray();
         }
 
         public Keccak StateRoot => Convert(_wrapped.Hash);
@@ -171,15 +178,16 @@ public class PaprikaStateFactory : IStateFactory
             Span<byte> bytes = stackalloc byte[32];
             GetKey(cell.Index, bytes);
 
-            return _wrapped.GetStorage(Convert(cell.Address), new PaprikaKeccak(bytes), bytes).ToArray();
+            Span<byte> value = _wrapped.GetStorage(Convert(cell.Address), new PaprikaKeccak(bytes), bytes);
+            return value.IsEmpty ? new byte[] { 0 } : value.ToArray();
         }
 
         public void SetStorage(in StorageCell cell, ReadOnlySpan<byte> value)
         {
             Span<byte> key = stackalloc byte[32];
             GetKey(cell.Index, key);
-
-            _wrapped.SetStorage(Convert(cell.Address), new PaprikaKeccak(key), value);
+            _wrapped.SetStorage(Convert(cell.Address), new PaprikaKeccak(key),
+                value.IsZero() ? ReadOnlySpan<byte>.Empty : value);
         }
 
         public void Commit(long blockNumber) => _wrapped.Commit((uint)blockNumber);

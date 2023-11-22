@@ -90,7 +90,7 @@ namespace Nethermind.Init.Steps
                     {
                         foreach (BlockHeader finalized in e.FinalizedBlocks)
                         {
-                            paprika.Finalize(finalized.StateRoot!);
+                            paprika.Finalize(finalized.StateRoot!, finalized.Number!);
                         }
                     });
                     _api.DisposeStack.Push(paprika);

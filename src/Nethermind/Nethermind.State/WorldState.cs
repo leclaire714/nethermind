@@ -148,6 +148,11 @@ namespace Nethermind.State
         public void CommitTree(long blockNumber)
         {
             _state.Commit(blockNumber);
+
+            // clean previous and get new
+            IState previous = _state;
+            previous.Dispose();
+            _state = _factory.Get(previous.StateRoot);
         }
 
         public void TouchCode(Keccak codeHash)
