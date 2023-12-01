@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System.Collections.Concurrent;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
@@ -23,18 +24,18 @@ public class PaprikaStateFactory : IStateFactory
 
     private readonly PagedDb _db;
     private readonly Blockchain _blockchain;
-
-    private long _lastFinalized;
+    private readonly Queue<(PaprikaKeccak keccak, uint number)> _poorManFinalizationQueue = new();
+    private uint _lastFinalized = 0;
 
     public PaprikaStateFactory(string directory)
     {
         _db = PagedDb.MemoryMappedDb(_sepolia, 64, directory, true);
         _blockchain = new Blockchain(_db, new ComputeMerkleBehavior(true, 2, 2), _flushFileEvery);
-        _blockchain.Flushed += (_, blockNumber) =>
-            ReorgBoundaryReached?.Invoke(this, new ReorgBoundaryReached(blockNumber));
+        _blockchain.Flushed += (_, flushed) =>
+            ReorgBoundaryReached?.Invoke(this, new ReorgBoundaryReached(flushed.blockNumber));
     }
 
-    public IState Get(Keccak stateRoot) => new State(_blockchain.StartNew(Convert(stateRoot)));
+    public IState Get(Keccak stateRoot) => new State(_blockchain.StartNew(Convert(stateRoot)), this);
 
     public IReadOnlyState GetReadOnly(Keccak stateRoot) =>
         new ReadOnlyState(_blockchain.StartReadOnly(Convert(stateRoot)));
@@ -86,7 +87,6 @@ public class PaprikaStateFactory : IStateFactory
     public void Finalize(Keccak finalizedStateRoot, long finalizedNumber)
     {
         _blockchain.Finalize(Convert(finalizedStateRoot));
-        Volatile.Write(ref _lastFinalized, Math.Max(finalizedNumber, Volatile.Read(ref _lastFinalized)));
     }
 
     class ReadOnlyState : IReadOnlyState
@@ -133,10 +133,12 @@ public class PaprikaStateFactory : IStateFactory
     class State : IState
     {
         private readonly IWorldState _wrapped;
+        private readonly PaprikaStateFactory _factory;
 
-        public State(IWorldState wrapped)
+        public State(IWorldState wrapped, PaprikaStateFactory factory)
         {
             _wrapped = wrapped;
+            _factory = factory;
         }
 
         public void Set(Address address, Account? account)
@@ -190,12 +192,42 @@ public class PaprikaStateFactory : IStateFactory
                 value.IsZero() ? ReadOnlySpan<byte>.Empty : value);
         }
 
-        public void Commit(long blockNumber) => _wrapped.Commit((uint)blockNumber);
+        public void Commit(long blockNumber)
+        {
+            _wrapped.Commit((uint)blockNumber);
+            _factory.Committed(_wrapped, (uint)blockNumber);
+        }
 
         public void Reset() => _wrapped.Reset();
 
         public Keccak StateRoot => Convert(_wrapped.Hash);
 
         public void Dispose() => _wrapped.Dispose();
+    }
+
+    private void Committed(IWorldState block, uint committedAt)
+    {
+        const int poorManFinality = 128;
+
+        lock (_poorManFinalizationQueue)
+        {
+            _poorManFinalizationQueue.Enqueue((block.Hash, committedAt));
+
+            while (_poorManFinalizationQueue.TryPeek(out (PaprikaKeccak hash, uint number) peeked))
+            {
+                if ((committedAt - peeked.number <= poorManFinality))
+                {
+                    break;
+                }
+
+                _poorManFinalizationQueue.Dequeue();
+
+                if (peeked.number > _lastFinalized)
+                {
+                    _blockchain.Finalize(peeked.hash);
+                    _lastFinalized = peeked.number;
+                }
+            }
+        }
     }
 }

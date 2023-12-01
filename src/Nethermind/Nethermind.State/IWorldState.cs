@@ -56,6 +56,11 @@ public interface IWorldState : IJournal<Snapshot>, IReadOnlyStateProvider
     void Reset();
 
     /// <summary>
+    /// Resets the world state to the given state root.
+    /// </summary>
+    void ResetTo(Keccak stateRoot);
+
+    /// <summary>
     /// Creates a restartable snapshot.
     /// </summary>
     /// <param name="newTransactionStart"> Indicates new transaction will start here.</param>

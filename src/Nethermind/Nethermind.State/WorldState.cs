@@ -94,6 +94,15 @@ namespace Nethermind.State
             _transientStorageProvider.Reset();
         }
 
+        public void ResetTo(Keccak stateRoot)
+        {
+            _state?.Dispose();
+            _state = _factory.Get(stateRoot);
+            _stateProvider.Reset();
+            _persistentStorageProvider.Reset();
+            _transientStorageProvider.Reset();
+        }
+
         public void ClearStorage(Address address)
         {
             _persistentStorageProvider.ClearStorage(address);
