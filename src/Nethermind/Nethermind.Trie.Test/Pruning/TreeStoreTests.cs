@@ -41,7 +41,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Memory_with_one_node_is_288()
         {
-            TrieNode trieNode = new(NodeType.Leaf, Keccak.Zero); // 56B
+            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero); // 56B
 
             using TrieStore trieStore = new(new MemDb(), new TestPruningStrategy(true), No.Persistence, _logManager);
             trieStore.CommitNode(1234, new NodeCommitInfo(trieNode));
@@ -53,9 +53,9 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Pruning_off_cache_should_not_change_commit_node()
         {
-            TrieNode trieNode = new(NodeType.Leaf, Keccak.Zero);
-            TrieNode trieNode2 = new(NodeType.Branch, TestItem.KeccakA);
-            TrieNode trieNode3 = new(NodeType.Branch, TestItem.KeccakB);
+            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode2 = new(NodeType.Branch, null, TreePath.Empty, TestItem.KeccakA);
+            TrieNode trieNode3 = new(NodeType.Branch, null, TreePath.Empty, TestItem.KeccakB);
 
             using TrieStore trieStore = new(new MemDb(), No.Pruning, No.Persistence, _logManager);
             trieStore.CommitNode(1234, new NodeCommitInfo(trieNode));
@@ -68,7 +68,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void When_commit_forward_write_flag_if_available()
         {
-            TrieNode trieNode = new(NodeType.Leaf, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
 
             TestMemDb testMemDb = new TestMemDb();
 
@@ -81,7 +81,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Should_always_announce_block_number_when_pruning_disabled_and_persisting()
         {
-            TrieNode trieNode = new(NodeType.Leaf, Keccak.Zero) { LastSeen = 1 };
+            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero) { LastSeen = 1 };
 
             long reorgBoundaryCount = 0L;
             using TrieStore trieStore = new(new MemDb(), No.Pruning, Archive.Instance, _logManager);
@@ -99,7 +99,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Should_always_announce_zero_when_not_persisting()
         {
-            TrieNode trieNode = new(NodeType.Leaf, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
 
             long reorgBoundaryCount = 0L;
             using TrieStore trieStore = new(new MemDb(), No.Pruning, No.Persistence, _logManager);
@@ -115,9 +115,9 @@ namespace Nethermind.Trie.Test.Pruning
         public void Pruning_off_cache_should_not_find_cached_or_unknown()
         {
             using TrieStore trieStore = new(new MemDb(), No.Pruning, No.Persistence, _logManager);
-            TrieNode returnedNode = trieStore.FindCachedOrUnknown(TestItem.KeccakA);
-            TrieNode returnedNode2 = trieStore.FindCachedOrUnknown(TestItem.KeccakB);
-            TrieNode returnedNode3 = trieStore.FindCachedOrUnknown(TestItem.KeccakC);
+            TrieNode returnedNode = trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakA);
+            TrieNode returnedNode2 = trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakB);
+            TrieNode returnedNode3 = trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakC);
             Assert.That(returnedNode.NodeType, Is.EqualTo(NodeType.Unknown));
             Assert.That(returnedNode2.NodeType, Is.EqualTo(NodeType.Unknown));
             Assert.That(returnedNode3.NodeType, Is.EqualTo(NodeType.Unknown));
@@ -129,25 +129,25 @@ namespace Nethermind.Trie.Test.Pruning
         {
             using TrieStore trieStore = new(new MemDb(), new TestPruningStrategy(true), No.Persistence, _logManager);
             long startSize = trieStore.MemoryUsedByDirtyCache;
-            trieStore.FindCachedOrUnknown(TestItem.KeccakA);
-            TrieNode trieNode = new(NodeType.Leaf, Keccak.Zero);
+            trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakA);
+            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
             long oneKeccakSize = trieNode.GetMemorySize(false);
             Assert.That(trieStore.MemoryUsedByDirtyCache, Is.EqualTo(startSize + oneKeccakSize));
-            trieStore.FindCachedOrUnknown(TestItem.KeccakB);
+            trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakB);
             Assert.That(trieStore.MemoryUsedByDirtyCache, Is.EqualTo(2 * oneKeccakSize + startSize));
-            trieStore.FindCachedOrUnknown(TestItem.KeccakB);
+            trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakB);
             Assert.That(trieStore.MemoryUsedByDirtyCache, Is.EqualTo(2 * oneKeccakSize + startSize));
-            trieStore.FindCachedOrUnknown(TestItem.KeccakC);
+            trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakC);
             Assert.That(trieStore.MemoryUsedByDirtyCache, Is.EqualTo(3 * oneKeccakSize + startSize));
-            trieStore.FindCachedOrUnknown(TestItem.KeccakD, true);
+            trieStore.FindCachedOrUnknown(null, TreePath.Empty, TestItem.KeccakD, true);
             Assert.That(trieStore.MemoryUsedByDirtyCache, Is.EqualTo(3 * oneKeccakSize + startSize));
         }
 
         [Test]
         public void Memory_with_two_nodes_is_correct()
         {
-            TrieNode trieNode1 = new(NodeType.Leaf, TestItem.KeccakA);
-            TrieNode trieNode2 = new(NodeType.Leaf, TestItem.KeccakB);
+            TrieNode trieNode1 = new(NodeType.Leaf, null, TreePath.Empty, TestItem.KeccakA);
+            TrieNode trieNode2 = new(NodeType.Leaf, null, TreePath.Empty, TestItem.KeccakB);
 
             using TrieStore trieStore = new(new MemDb(), new TestPruningStrategy(true), No.Persistence, _logManager);
             trieStore.CommitNode(1234, new NodeCommitInfo(trieNode1));
@@ -160,10 +160,10 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Memory_with_two_times_two_nodes_is_correct()
         {
-            TrieNode trieNode1 = new(NodeType.Leaf, TestItem.KeccakA);
-            TrieNode trieNode2 = new(NodeType.Leaf, TestItem.KeccakB);
-            TrieNode trieNode3 = new(NodeType.Leaf, TestItem.KeccakA);
-            TrieNode trieNode4 = new(NodeType.Leaf, TestItem.KeccakB);
+            TrieNode trieNode1 = new(NodeType.Leaf, null, TreePath.Empty, TestItem.KeccakA);
+            TrieNode trieNode2 = new(NodeType.Leaf, null, TreePath.Empty, TestItem.KeccakB);
+            TrieNode trieNode3 = new(NodeType.Leaf, null, TreePath.Empty, TestItem.KeccakA);
+            TrieNode trieNode4 = new(NodeType.Leaf, null, TreePath.Empty, TestItem.KeccakB);
 
             using TrieStore trieStore = new(new MemDb(), new TestPruningStrategy(true), No.Persistence, _logManager);
             trieStore.CommitNode(1234, new NodeCommitInfo(trieNode1));
@@ -182,15 +182,15 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Dispatcher_will_try_to_clear_memory()
         {
-            TrieNode trieNode1 = new(NodeType.Leaf, new byte[0]);
+            TrieNode trieNode1 = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]);
             trieNode1.ResolveKey(null!, true);
-            TrieNode trieNode2 = new(NodeType.Leaf, new byte[1]);
+            TrieNode trieNode2 = new(NodeType.Leaf, null, TreePath.Empty, new byte[1]);
             trieNode2.ResolveKey(null!, true);
 
-            TrieNode trieNode3 = new(NodeType.Leaf, new byte[2]);
+            TrieNode trieNode3 = new(NodeType.Leaf, null, TreePath.Empty, new byte[2]);
             trieNode3.ResolveKey(null!, true);
 
-            TrieNode trieNode4 = new(NodeType.Leaf, new byte[3]);
+            TrieNode trieNode4 = new(NodeType.Leaf, null, TreePath.Empty, new byte[3]);
             trieNode4.ResolveKey(null!, true);
 
             using TrieStore trieStore = new(new MemDb(), new MemoryLimit(640), No.Persistence, _logManager);
@@ -211,15 +211,15 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Dispatcher_will_try_to_clear_memory_the_soonest_possible()
         {
-            TrieNode trieNode1 = new(NodeType.Leaf, new byte[0]);
+            TrieNode trieNode1 = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]);
             trieNode1.ResolveKey(null!, true);
-            TrieNode trieNode2 = new(NodeType.Leaf, new byte[1]);
+            TrieNode trieNode2 = new(NodeType.Leaf, null, TreePath.Empty, new byte[1]);
             trieNode2.ResolveKey(null!, true);
 
-            TrieNode trieNode3 = new(NodeType.Leaf, new byte[2]);
+            TrieNode trieNode3 = new(NodeType.Leaf, null, TreePath.Empty, new byte[2]);
             trieNode3.ResolveKey(null!, true);
 
-            TrieNode trieNode4 = new(NodeType.Leaf, new byte[3]);
+            TrieNode trieNode4 = new(NodeType.Leaf, null, TreePath.Empty, new byte[3]);
             trieNode4.ResolveKey(null!, true);
 
             using TrieStore trieStore = new(new MemDb(), new MemoryLimit(512), No.Persistence, _logManager);
@@ -243,12 +243,12 @@ namespace Nethermind.Trie.Test.Pruning
             {
                 for (int j = 0; j < 1 + i % 3; j++)
                 {
-                    TrieNode trieNode = new(NodeType.Leaf, new byte[0]); // 192B
+                    TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]); // 192B
                     trieNode.ResolveKey(NullTrieNodeResolver.Instance, true);
                     trieStore.CommitNode(i, new NodeCommitInfo(trieNode));
                 }
 
-                TrieNode fakeRoot = new(NodeType.Leaf, new byte[0]); // 192B
+                TrieNode fakeRoot = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]); // 192B
                 fakeRoot.ResolveKey(NullTrieNodeResolver.Instance, true);
                 trieStore.FinishBlockCommit(TrieType.State, i, fakeRoot);
             }
@@ -259,7 +259,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Dispatcher_will_save_to_db_everything_from_snapshot_blocks()
         {
-            TrieNode a = new(NodeType.Leaf, new byte[0]); // 192B
+            TrieNode a = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]); // 192B
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             MemDb memDb = new();
@@ -280,7 +280,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Stays_in_memory_until_persisted()
         {
-            TrieNode a = new(NodeType.Leaf, new byte[0]); // 192B
+            TrieNode a = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]); // 192B
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             MemDb memDb = new();
@@ -305,13 +305,13 @@ namespace Nethermind.Trie.Test.Pruning
             memDb[Keccak.Zero.Bytes] = new byte[] { 1, 2, 3 };
 
             using TrieStore trieStore = new(memDb, _logManager);
-            trieStore.LoadRlp(Keccak.Zero).Should().NotBeNull();
+            trieStore.LoadRlp(null, TreePath.Empty, Keccak.Zero).Should().NotBeNull();
         }
 
         [Test]
         public void Will_get_persisted_on_snapshot_if_referenced()
         {
-            TrieNode a = new(NodeType.Leaf, new byte[0]); // 192B
+            TrieNode a = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]); // 192B
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             MemDb memDb = new();
@@ -336,10 +336,10 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Will_not_get_dropped_on_snapshot_if_unreferenced_in_later_blocks()
         {
-            TrieNode a = new(NodeType.Leaf, new byte[0]);
+            TrieNode a = new(NodeType.Leaf, null, TreePath.Empty, new byte[0]);
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
-            TrieNode b = new(NodeType.Leaf, new byte[1]);
+            TrieNode b = new(NodeType.Leaf, null, TreePath.Empty, new byte[1]);
             b.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             MemDb memDb = new();
@@ -365,10 +365,10 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Will_get_dropped_on_snapshot_if_it_was_a_transient_node()
         {
-            TrieNode a = new(NodeType.Leaf, new byte[] { 1 });
+            TrieNode a = new(NodeType.Leaf, null, TreePath.Empty, new byte[] { 1 });
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
-            TrieNode b = new(NodeType.Leaf, new byte[] { 2 });
+            TrieNode b = new(NodeType.Leaf, null, TreePath.Empty, new byte[] { 2 });
             b.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             MemDb memDb = new();
@@ -451,7 +451,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Will_store_storage_on_snapshot()
         {
-            TrieNode storage1 = new(NodeType.Leaf, new byte[2]);
+            TrieNode storage1 = new(NodeType.Leaf, null, TreePath.Empty, new byte[2]);
             storage1.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             TrieNode a = new(NodeType.Leaf);
@@ -485,7 +485,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Will_drop_transient_storage()
         {
-            TrieNode storage1 = new(NodeType.Leaf, new byte[2]);
+            TrieNode storage1 = new(NodeType.Leaf, null, TreePath.Empty, new byte[2]);
             storage1.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             TrieNode a = new(NodeType.Leaf);
@@ -494,7 +494,7 @@ namespace Nethermind.Trie.Test.Pruning
             a.Key = Bytes.FromHexString("abc");
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
-            TrieNode b = new(NodeType.Leaf, new byte[1]);
+            TrieNode b = new(NodeType.Leaf, null, TreePath.Empty, new byte[1]);
             b.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             MemDb memDb = new();
@@ -524,7 +524,7 @@ namespace Nethermind.Trie.Test.Pruning
         [Test]
         public void Will_combine_same_storage()
         {
-            TrieNode storage1 = new(NodeType.Leaf, new byte[32]);
+            TrieNode storage1 = new(NodeType.Leaf, null, TreePath.Empty, new byte[32]);
             storage1.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             TrieNode a = new(NodeType.Leaf);
@@ -533,7 +533,7 @@ namespace Nethermind.Trie.Test.Pruning
             a.Key = Bytes.FromHexString("abc");
             a.ResolveKey(NullTrieNodeResolver.Instance, true);
 
-            TrieNode storage2 = new(NodeType.Leaf, new byte[32]);
+            TrieNode storage2 = new(NodeType.Leaf, null, TreePath.Empty, new byte[32]);
             storage2.ResolveKey(NullTrieNodeResolver.Instance, true);
 
             TrieNode b = new(NodeType.Leaf);
@@ -591,7 +591,7 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 0, node);
 
             IReadOnlyTrieStore readOnlyTrieStore = trieStore.AsReadOnly(originalStore);
-            readOnlyTrieStore.LoadRlp(node.Keccak);
+            readOnlyTrieStore.LoadRlp(null, TreePath.Empty, node.Keccak);
 
             witnessCollector.Collected.Should().BeEmpty();
         }
@@ -603,7 +603,7 @@ namespace Nethermind.Trie.Test.Pruning
             TrieNode trieNode = new(NodeType.Branch);
             for (int i = 0; i < 16; i++)
             {
-                trieNode.SetChild(i, new TrieNode(NodeType.Unknown, TestItem.Keccaks[i]));
+                trieNode.SetChild(i, new TrieNode(NodeType.Unknown, null, TreePath.Empty, TestItem.Keccaks[i]));
             }
 
             trieNode.Seal();
@@ -625,7 +625,7 @@ namespace Nethermind.Trie.Test.Pruning
                 {
                     try
                     {
-                        trieStore.FindCachedOrUnknown(trieNode.Keccak).GetChildHash(i % 16).Should().BeEquivalentTo(TestItem.Keccaks[i % 16], i.ToString());
+                        trieStore.FindCachedOrUnknown(null, TreePath.Empty, trieNode.Keccak).GetChildHash(i % 16).Should().BeEquivalentTo(TestItem.Keccaks[i % 16], i.ToString());
                     }
                     catch (Exception)
                     {
@@ -665,10 +665,10 @@ namespace Nethermind.Trie.Test.Pruning
             using TrieStore trieStore = new(new MemDb(), new TestPruningStrategy(pruning), No.Persistence, _logManager);
             trieStore.CommitNode(0, new NodeCommitInfo(node));
             trieStore.FinishBlockCommit(TrieType.State, 0, node);
-            var originalNode = trieStore.FindCachedOrUnknown(node.Keccak);
+            var originalNode = trieStore.FindCachedOrUnknown(null, TreePath.Empty, node.Keccak);
 
             IReadOnlyTrieStore readOnlyTrieStore = trieStore.AsReadOnly();
-            var readOnlyNode = readOnlyTrieStore.FindCachedOrUnknown(node.Keccak);
+            var readOnlyNode = readOnlyTrieStore.FindCachedOrUnknown(null, TreePath.Empty, node.Keccak);
 
             readOnlyNode.Should().NotBe(originalNode);
             readOnlyNode.Should().BeEquivalentTo(originalNode,

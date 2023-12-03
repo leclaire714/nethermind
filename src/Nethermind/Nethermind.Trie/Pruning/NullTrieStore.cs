@@ -29,9 +29,9 @@ namespace Nethermind.Trie.Pruning
 
         public IKeyValueStore AsKeyValueStore() => null!;
 
-        public TrieNode FindCachedOrUnknown(Hash256 hash) => new(NodeType.Unknown, hash);
+        public TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath treePath, Hash256 hash) => new(NodeType.Unknown, storageRoot, treePath, hash);
 
-        public byte[] LoadRlp(Hash256 hash, ReadFlags flags = ReadFlags.None) => Array.Empty<byte>();
+        public byte[] LoadRlp(Hash256? storageRoot, TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None) => Array.Empty<byte>();
 
         public bool IsPersisted(in ValueHash256 keccak) => true;
 

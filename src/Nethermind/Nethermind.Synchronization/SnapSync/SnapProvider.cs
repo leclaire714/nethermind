@@ -223,7 +223,9 @@ namespace Nethermind.Synchronization.SnapSync
 
                         try
                         {
-                            TrieNode node = new(NodeType.Unknown, nodeData, isDirty: true);
+                            TreePath path = TreePath.FromPath(requestedPath.PathAndAccount.Path.Bytes);
+
+                            TrieNode node = new(NodeType.Unknown, null, path, nodeData, isDirty: true);
                             node.ResolveNode(store);
                             node.ResolveKey(store, true);
 

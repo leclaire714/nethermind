@@ -23,7 +23,7 @@ public class TrieNodeResolverWithReadFlagsTests
 
         Hash256 theKeccak = TestItem.KeccakA;
         memDb[theKeccak.Bytes] = TestItem.KeccakA.BytesToArray();
-        resolver.LoadRlp(theKeccak);
+        resolver.LoadRlp(null, new TreePath(), theKeccak);
 
         memDb.KeyWasReadWithFlags(theKeccak.BytesToArray(), theFlags);
     }
@@ -38,7 +38,7 @@ public class TrieNodeResolverWithReadFlagsTests
 
         Hash256 theKeccak = TestItem.KeccakA;
         memDb[theKeccak.Bytes] = TestItem.KeccakA.BytesToArray();
-        resolver.LoadRlp(theKeccak, ReadFlags.HintReadAhead);
+        resolver.LoadRlp(null, new TreePath(), theKeccak, ReadFlags.HintReadAhead);
 
         memDb.KeyWasReadWithFlags(theKeccak.BytesToArray(), theFlags | ReadFlags.HintReadAhead);
     }

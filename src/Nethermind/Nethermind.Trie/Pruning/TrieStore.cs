@@ -40,7 +40,7 @@ namespace Nethermind.Trie.Pruning
                 }
             }
 
-            public TrieNode FindCachedOrUnknown(Hash256 hash)
+            public TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath path, Hash256 hash)
             {
                 if (_objectsCache.TryGetValue(hash, out TrieNode trieNode))
                 {
@@ -49,14 +49,14 @@ namespace Nethermind.Trie.Pruning
                 else
                 {
                     if (_trieStore._logger.IsTrace) _trieStore._logger.Trace($"Creating new node {trieNode}");
-                    trieNode = new TrieNode(NodeType.Unknown, hash);
+                    trieNode = new TrieNode(NodeType.Unknown, storageRoot, path, hash);
                     SaveInCache(trieNode);
                 }
 
                 return trieNode;
             }
 
-            public TrieNode FromCachedRlpOrUnknown(Hash256 hash)
+            public TrieNode FromCachedRlpOrUnknown(Hash256? storageRoot, TreePath path, Hash256 hash)
             {
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (_objectsCache.TryGetValue(hash, out TrieNode? trieNode))
@@ -65,11 +65,11 @@ namespace Nethermind.Trie.Pruning
                     {
                         // // this happens in SyncProgressResolver
                         // throw new InvalidAsynchronousStateException("Read only trie store is trying to read a transient node.");
-                        return new TrieNode(NodeType.Unknown, hash);
+                        return new TrieNode(NodeType.Unknown, storageRoot, path, hash);
                     }
 
                     // we returning a copy to avoid multithreaded access
-                    trieNode = new TrieNode(NodeType.Unknown, hash, trieNode.FullRlp);
+                    trieNode = new TrieNode(NodeType.Unknown, storageRoot, path, hash, trieNode.FullRlp);
                     trieNode.ResolveNode(_trieStore);
                     trieNode.Keccak = hash;
 
@@ -77,7 +77,7 @@ namespace Nethermind.Trie.Pruning
                 }
                 else
                 {
-                    trieNode = new TrieNode(NodeType.Unknown, hash);
+                    trieNode = new TrieNode(NodeType.Unknown, storageRoot, path, hash);
                 }
 
                 if (_trieStore._logger.IsTrace) _trieStore._logger.Trace($"Creating new node {trieNode}");
@@ -248,7 +248,7 @@ namespace Nethermind.Trie.Pruning
             {
                 if (IsNodeCached(node.Keccak))
                 {
-                    TrieNode cachedNodeCopy = FindCachedOrUnknown(node.Keccak);
+                    TrieNode cachedNodeCopy = FindCachedOrUnknown(node.StorageRoot, node.Path, node.Keccak);
                     if (!ReferenceEquals(cachedNodeCopy, node))
                     {
                         if (_logger.IsTrace) _logger.Trace($"Replacing {node} with its cached copy {cachedNodeCopy}.");
@@ -322,10 +322,15 @@ namespace Nethermind.Trie.Pruning
 
         public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached;
 
-        public byte[] LoadRlp(Hash256 keccak, IKeyValueStore? keyValueStore, ReadFlags readFlags = ReadFlags.None)
+        private byte[] GetNodeStoragePath(Hash256? storageRoot, TreePath path, Hash256 keccak)
+        {
+            return keccak.Bytes.ToArray();
+        }
+
+        public byte[] LoadRlp(Hash256? storageRoot, TreePath path, Hash256 keccak, IKeyValueStore? keyValueStore, ReadFlags readFlags = ReadFlags.None)
         {
             keyValueStore ??= _keyValueStore;
-            byte[]? rlp = keyValueStore.Get(keccak.Bytes, readFlags);
+            byte[]? rlp = keyValueStore.Get(GetNodeStoragePath(storageRoot, path, keccak), readFlags);
 
             if (rlp is null)
             {
@@ -337,7 +342,10 @@ namespace Nethermind.Trie.Pruning
             return rlp;
         }
 
-        public virtual byte[] LoadRlp(Hash256 keccak, ReadFlags readFlags = ReadFlags.None) => LoadRlp(keccak, null, readFlags);
+        public virtual byte[]? LoadRlp(Hash256? storageRoot, TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None)
+        {
+            return LoadRlp(storageRoot, path, hash, null, flags);
+        }
 
         public bool IsPersisted(in ValueHash256 keccak)
         {
@@ -360,12 +368,12 @@ namespace Nethermind.Trie.Pruning
 
         public bool IsNodeCached(Hash256 hash) => _dirtyNodes.IsNodeCached(hash);
 
-        public TrieNode FindCachedOrUnknown(Hash256? hash)
+        public TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath path, Hash256? hash)
         {
-            return FindCachedOrUnknown(hash, false);
+            return FindCachedOrUnknown(storageRoot, path, hash, false);
         }
 
-        internal TrieNode FindCachedOrUnknown(Hash256? hash, bool isReadOnly)
+        internal TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath path, Hash256? hash, bool isReadOnly)
         {
             if (hash is null)
             {
@@ -374,10 +382,10 @@ namespace Nethermind.Trie.Pruning
 
             if (!_pruningStrategy.PruningEnabled)
             {
-                return new TrieNode(NodeType.Unknown, hash);
+                return new TrieNode(NodeType.Unknown, storageRoot, path, hash);
             }
 
-            return isReadOnly ? _dirtyNodes.FromCachedRlpOrUnknown(hash) : _dirtyNodes.FindCachedOrUnknown(hash);
+            return isReadOnly ? _dirtyNodes.FromCachedRlpOrUnknown(storageRoot, path, hash) : _dirtyNodes.FindCachedOrUnknown(storageRoot, path, hash);
         }
 
         public void Dump() => _dirtyNodes.Dump();
@@ -652,7 +660,7 @@ namespace Nethermind.Trie.Pruning
                 // to prevent it from being removed from cache and also want to have it persisted.
 
                 if (_logger.IsTrace) _logger.Trace($"Persisting {nameof(TrieNode)} {currentNode} in snapshot {blockNumber}.");
-                _currentBatch.Set(currentNode.Keccak, currentNode.FullRlp, writeFlags);
+                _currentBatch.Set(GetNodeStoragePath(currentNode.StorageRoot, currentNode.Path, currentNode.Keccak), currentNode.FullRlp.ToArray(), writeFlags);
                 currentNode.IsPersisted = true;
                 currentNode.LastSeen = Math.Max(blockNumber, currentNode.LastSeen ?? 0);
                 PersistedNodesCount++;

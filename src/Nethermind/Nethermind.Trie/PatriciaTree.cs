@@ -57,6 +57,9 @@ namespace Nethermind.Trie
 
         public TrieNode? RootRef { get; set; }
 
+        public bool IsStorage { get; set; } = false;
+        public Hash256? StorageRoot => IsStorage ? _rootHash : null;
+
         /// <summary>
         /// Only used in EthereumTests
         /// </summary>
@@ -303,7 +306,7 @@ namespace Nethermind.Trie
             }
             else if (resetObjects)
             {
-                RootRef = TrieStore.FindCachedOrUnknown(_rootHash);
+                RootRef = TrieStore.FindCachedOrUnknown(StorageRoot, new TreePath(), _rootHash);
             }
         }
 
@@ -427,7 +430,7 @@ namespace Nethermind.Trie
             if (startRootHash is not null)
             {
                 if (_logger.IsTrace) _logger.Trace($"Starting from {startRootHash} - {traverseContext.ToString()}");
-                TrieNode startNode = TrieStore.FindCachedOrUnknown(startRootHash);
+                TrieNode startNode = TrieStore.FindCachedOrUnknown(StorageRoot, new TreePath(), startRootHash);
                 ResolveNode(startNode, in traverseContext);
                 result = TraverseNode(startNode, in traverseContext);
             }
@@ -1076,7 +1079,7 @@ namespace Nethermind.Trie
             TrieNode rootRef = null;
             if (!rootHash.Equals(Keccak.EmptyTreeHash))
             {
-                rootRef = RootHash == rootHash ? RootRef : TrieStore.FindCachedOrUnknown(rootHash);
+                rootRef = RootHash == rootHash ? RootRef : TrieStore.FindCachedOrUnknown(StorageRoot, new TreePath(), rootHash);
                 try
                 {
                     rootRef!.ResolveNode(TrieStore);

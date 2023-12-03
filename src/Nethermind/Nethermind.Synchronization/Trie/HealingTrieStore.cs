@@ -33,11 +33,11 @@ public class HealingTrieStore : TrieStore
         _recovery = recovery;
     }
 
-    public override byte[] LoadRlp(Hash256 keccak, ReadFlags readFlags = ReadFlags.None)
+    public override byte[] LoadRlp(Hash256? storageRoot, TreePath path, Hash256 keccak, ReadFlags readFlags = ReadFlags.None)
     {
         try
         {
-            return base.LoadRlp(keccak, readFlags);
+            return base.LoadRlp(storageRoot, path, keccak, readFlags);
         }
         catch (TrieNodeException)
         {

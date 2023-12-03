@@ -50,7 +50,7 @@ namespace Nethermind.Blockchain.Test.Proofs
 
         private static void VerifyProof(byte[][] proof, Hash256 receiptRoot)
         {
-            TrieNode node = new(NodeType.Unknown, proof.Last());
+            TrieNode node = new(NodeType.Unknown, null, new TreePath(), proof.Last());
             node.ResolveNode(Substitute.For<ITrieNodeResolver>());
             TxReceipt receipt = new ReceiptMessageDecoder().Decode(node.Value.AsRlpStream());
             Assert.NotNull(receipt.Bloom);

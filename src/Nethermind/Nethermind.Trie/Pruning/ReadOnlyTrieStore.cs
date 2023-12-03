@@ -23,10 +23,11 @@ namespace Nethermind.Trie.Pruning
             _publicStore = new ReadOnlyValueStore(_trieStore.AsKeyValueStore());
         }
 
-        public TrieNode FindCachedOrUnknown(Hash256 hash) =>
-            _trieStore.FindCachedOrUnknown(hash, true);
+        public TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath treePath, Hash256 hash) =>
+            _trieStore.FindCachedOrUnknown(storageRoot, treePath, hash, true);
 
-        public byte[] LoadRlp(Hash256 hash, ReadFlags flags) => _trieStore.LoadRlp(hash, _readOnlyStore, flags);
+        public byte[] LoadRlp(Hash256? storageRoot, TreePath treePath, Hash256 hash, ReadFlags flags) =>
+            _trieStore.LoadRlp(storageRoot, treePath, hash, _readOnlyStore, flags);
 
         public bool IsPersisted(in ValueHash256 keccak) => _trieStore.IsPersisted(keccak);
 

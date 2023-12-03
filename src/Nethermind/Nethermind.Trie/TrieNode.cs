@@ -56,6 +56,10 @@ namespace Nethermind.Trie
 
         public CappedArray<byte> FullRlp { get; internal set; }
 
+        // TODO: TrieNode/PatriciaTrie should not be concerned about StorageRoot.
+        public Hash256? StorageRoot;
+        public TreePath Path;
+
         public NodeType NodeType { get; private set; }
 
         public bool IsDirty { get; private set; }
@@ -206,9 +210,11 @@ namespace Nethermind.Trie
             IsDirty = true;
         }
 
-        public TrieNode(NodeType nodeType, Hash256 keccak)
+        public TrieNode(NodeType nodeType, Hash256? storageRoot, TreePath path, Hash256 keccak)
         {
             Keccak = keccak ?? throw new ArgumentNullException(nameof(keccak));
+            Path = path;
+            StorageRoot = storageRoot;
             NodeType = nodeType;
             if (nodeType == NodeType.Unknown)
             {
@@ -216,8 +222,10 @@ namespace Nethermind.Trie
             }
         }
 
-        public TrieNode(NodeType nodeType, CappedArray<byte> rlp, bool isDirty = false)
+        public TrieNode(NodeType nodeType, Hash256? storageRoot, TreePath path, CappedArray<byte> rlp, bool isDirty = false)
         {
+            Path = path;
+            StorageRoot = storageRoot;
             NodeType = nodeType;
             FullRlp = rlp;
             IsDirty = isDirty;
@@ -225,17 +233,17 @@ namespace Nethermind.Trie
             _rlpStream = rlp.AsRlpStream();
         }
 
-        public TrieNode(NodeType nodeType, byte[]? rlp, bool isDirty = false) : this(nodeType, new CappedArray<byte>(rlp), isDirty)
+        public TrieNode(NodeType nodeType, Hash256? storageRoot, TreePath path, byte[]? rlp, bool isDirty = false) : this(nodeType, storageRoot, path, new CappedArray<byte>(rlp), isDirty)
         {
         }
 
-        public TrieNode(NodeType nodeType, Hash256 keccak, ReadOnlySpan<byte> rlp)
-            : this(nodeType, keccak, new CappedArray<byte>(rlp.ToArray()))
+        public TrieNode(NodeType nodeType, Hash256? storageRoot, TreePath path, Hash256 keccak, ReadOnlySpan<byte> rlp)
+            : this(nodeType, storageRoot, path, keccak, new CappedArray<byte>(rlp.ToArray()))
         {
         }
 
-        public TrieNode(NodeType nodeType, Hash256 keccak, CappedArray<byte> rlp)
-            : this(nodeType, rlp)
+        public TrieNode(NodeType nodeType, Hash256? storageRoot, TreePath path, Hash256 keccak, CappedArray<byte> rlp)
+            : this(nodeType, storageRoot, path, rlp)
         {
             Keccak = keccak;
             if (nodeType == NodeType.Unknown)
@@ -284,7 +292,7 @@ namespace Nethermind.Trie
                             throw new TrieException("Unable to resolve node without Keccak");
                         }
 
-                        FullRlp = tree.LoadRlp(Keccak, readFlags);
+                        FullRlp = tree.LoadRlp(StorageRoot, Path, Keccak, readFlags);
                         IsPersisted = true;
 
                         if (FullRlp.IsNull)
@@ -538,7 +546,17 @@ namespace Nethermind.Trie
             }
             else if (childOrRef is Hash256 reference)
             {
-                child = tree.FindCachedOrUnknown(reference);
+                TreePath childPath = Path;
+                if (Key != null)
+                {
+                    // Should be just extension
+                    childPath.Append(Key);
+                }
+                else
+                {
+                    childPath.Append((byte) childIndex);
+                }
+                child = tree.FindCachedOrUnknown(StorageRoot, childPath, reference);
             }
             else
             {
@@ -579,8 +597,24 @@ namespace Nethermind.Trie
             }
 
             InitData();
+
+            if (node != null)
+            {
+                TreePath childPath = Path;
+                if (IsExtension) {
+                    childPath.Append(Key);
+                }
+                else
+                {
+                    childPath.Append((byte)i);
+                }
+
+                node.Path = childPath;
+            }
+
             int index = IsExtension ? i + 1 : i;
             _data![index] = node ?? _nullNode;
+
             Keccak = null;
         }
 
@@ -822,7 +856,7 @@ namespace Nethermind.Trie
                     if (storageRootKey != Nethermind.Core.Crypto.Keccak.EmptyTreeHash)
                     {
                         hasStorage = true;
-                        _storageRoot = storageRoot = resolver.FindCachedOrUnknown(storageRootKey);
+                        _storageRoot = storageRoot = resolver.FindCachedOrUnknown(storageRootKey, new TreePath(), storageRootKey);
                     }
                 }
             }
@@ -896,32 +930,56 @@ namespace Nethermind.Trie
                     {
                         case 0:
                         case 128:
-                            {
-                                _data![i] = childOrRef = _nullNode;
-                                break;
-                            }
+                        {
+                            _data![i] = childOrRef = _nullNode;
+                            break;
+                        }
                         case 160:
+                        {
+                            rlpStream.Position--;
+                            Hash256 keccak = rlpStream.DecodeKeccak();
+
+                            TreePath childPath = Path;
+                            if (NodeType == NodeType.Extension)
                             {
-                                rlpStream.Position--;
-                                Hash256 keccak = rlpStream.DecodeKeccak();
-                                TrieNode child = tree.FindCachedOrUnknown(keccak);
-                                _data![i] = childOrRef = child;
-
-                                if (IsPersisted && !child.IsPersisted)
-                                {
-                                    child.CallRecursively(_markPersisted, tree, false, NullLogger.Instance);
-                                }
-
-                                break;
+                                // Should be just extension
+                                childPath.Append(Key);
                             }
+                            else
+                            {
+                                childPath.Append((byte)i);
+                            }
+
+                            TrieNode child = tree.FindCachedOrUnknown(StorageRoot, childPath, keccak);
+                            _data![i] = childOrRef = child;
+
+                            if (IsPersisted && !child.IsPersisted)
+                            {
+                                child.CallRecursively(_markPersisted, tree, false, NullLogger.Instance);
+                            }
+
+                            break;
+                        }
                         default:
+                        {
+                            rlpStream.Position--;
+                            Span<byte> fullRlp = rlpStream.PeekNextItem();
+
+                            TreePath childPath = Path;
+                            if (NodeType == NodeType.Extension)
                             {
-                                rlpStream.Position--;
-                                Span<byte> fullRlp = rlpStream.PeekNextItem();
-                                TrieNode child = new(NodeType.Unknown, fullRlp.ToArray());
-                                _data![i] = childOrRef = child;
-                                break;
+                                // Should be just extension
+                                childPath.Append(Key);
                             }
+                            else
+                            {
+                                childPath.Append((byte)i);
+                            }
+
+                            TrieNode child = new(NodeType.Unknown, StorageRoot, childPath, fullRlp.ToArray());
+                            _data![i] = childOrRef = child;
+                            break;
+                        }
                     }
                 }
                 else

@@ -18,18 +18,18 @@ public class TrieNodeResolverWithReadFlags : ITrieNodeResolver
         _defaultFlags = defaultFlags;
     }
 
-    public TrieNode FindCachedOrUnknown(Hash256 hash)
+    public TrieNode FindCachedOrUnknown(Hash256 storageRoot, TreePath treePath, Hash256 hash)
     {
-        return _baseResolver.FindCachedOrUnknown(hash);
+        return _baseResolver.FindCachedOrUnknown(storageRoot, treePath, hash);
     }
 
-    public byte[]? LoadRlp(Hash256 hash, ReadFlags flags = ReadFlags.None)
+    public byte[]? LoadRlp(Hash256 storageRoot, TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None)
     {
         if (flags != ReadFlags.None)
         {
-            return _baseResolver.LoadRlp(hash, flags | _defaultFlags);
+            return _baseResolver.LoadRlp(storageRoot, treePath, hash, flags | _defaultFlags);
         }
 
-        return _baseResolver.LoadRlp(hash, _defaultFlags);
+        return _baseResolver.LoadRlp(storageRoot, treePath, hash, _defaultFlags);
     }
 }

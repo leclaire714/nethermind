@@ -129,7 +129,7 @@ public class BatchedTrieVisitor
     {
         // Start with the root
         SmallTrieVisitContext rootContext = new(trieVisitContext);
-        _partitions[CalculatePartitionIdx(root)].Push(new Job(root, rootContext));
+        _partitions[CalculatePartitionIdx(root)].Push(new Job(null, TreePath.Empty, root, rootContext));
         _activeJobs = 1;
         _queuedJobs = 1;
 
@@ -191,7 +191,7 @@ public class BatchedTrieVisitor
                 for (int i = 0; i < _maxBatchSize; i++)
                 {
                     if (!theStack.TryPop(out Job item)) break;
-                    finalBatch.Add((_resolver.FindCachedOrUnknown(item.Key.ToCommitment()), item.Context));
+                    finalBatch.Add((_resolver.FindCachedOrUnknown(item.Key.Item1?.ToCommitment(), item.Key.Item2, item.Key.Item3.ToCommitment()), item.Context));
                     Interlocked.Decrement(ref _queuedJobs);
                 }
             }
@@ -222,10 +222,10 @@ public class BatchedTrieVisitor
 
             for (int i = 0; i < endIdx; i++)
             {
-                Job job = preSort[i];
+                // Job job = preSort[i];
 
-                TrieNode node = _resolver.FindCachedOrUnknown(job.Key.ToCommitment());
-                finalBatch.Add((node, job.Context));
+                // TrieNode node = _resolver.FindCachedOrUnknown(job.Key.ToCommitment());
+                // finalBatch.Add((node, job.Context));
             }
 
             // Add back what we won't process. In reverse order.
@@ -269,7 +269,7 @@ public class BatchedTrieVisitor
             var theStack = _partitions[partitionIdx];
             lock (theStack)
             {
-                theStack.Push(new Job(keccak, ctx));
+                theStack.Push(new Job(trieNode.StorageRoot, trieNode.Path, keccak, ctx));
             }
         }
 
@@ -355,12 +355,12 @@ public class BatchedTrieVisitor
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private readonly struct Job
     {
-        public readonly ValueHash256 Key;
+        public readonly (ValueHash256?, TreePath, ValueHash256) Key;
         public readonly SmallTrieVisitContext Context;
 
-        public Job(ValueHash256 key, SmallTrieVisitContext context)
+        public Job(ValueHash256? storagePath, TreePath path, ValueHash256 key, SmallTrieVisitContext context)
         {
-            Key = key;
+            Key = (storagePath, path, key);
             Context = context;
         }
     }

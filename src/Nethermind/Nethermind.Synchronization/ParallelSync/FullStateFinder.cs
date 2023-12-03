@@ -39,7 +39,7 @@ public class FullStateFinder : IFullStateFinder
             return true;
         }
 
-        TrieNode trieNode = _trieNodeResolver.FindCachedOrUnknown(stateRoot);
+        TrieNode trieNode = _trieNodeResolver.FindCachedOrUnknown(null, new TreePath(), stateRoot);
         bool stateRootIsInMemory = trieNode.NodeType != NodeType.Unknown;
         // We check whether one of below happened:
         //   1) the block has been processed but not yet persisted (pruning) OR

@@ -21,6 +21,7 @@ using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
 using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
+using Org.BouncyCastle.Crypto.Digests;
 
 namespace Nethermind.Synchronization.FastSync
 {
@@ -767,7 +768,14 @@ namespace Nethermind.Synchronization.FastSync
         private void HandleTrieNode(StateSyncItem currentStateSyncItem, byte[] currentResponseItem, ref int invalidNodes)
         {
             NodeDataType nodeDataType = currentStateSyncItem.NodeDataType;
-            TrieNode trieNode = new(NodeType.Unknown, currentResponseItem);
+            Hash256? account = null;
+            TreePath path = TreePath.FromNibble(currentStateSyncItem.PathNibbles);
+            if ((currentStateSyncItem?.AccountPathNibbles?.Length ?? 0) != 0)
+            {
+                account = new Hash256(Nibbles.ToBytes(currentStateSyncItem.AccountPathNibbles));
+            }
+
+            TrieNode trieNode = new(NodeType.Unknown, account, path, currentResponseItem);
             trieNode.ResolveNode(NullTrieNodeResolver.Instance); // TODO: will this work now?
             switch (trieNode.NodeType)
             {

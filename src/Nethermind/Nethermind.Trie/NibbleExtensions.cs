@@ -118,5 +118,34 @@ namespace Nethermind.Trie
         }
 
         public static byte[] EncodePath(ReadOnlySpan<byte> input) => input.Length == 64 ? ToBytes(input) : ToCompactHexEncoding(input);
+
+        // TODO: Double check this
+        public static byte[] DecodePath(ReadOnlySpan<byte> input)
+        {
+            bool odd = (input[0] & 0xf0) == 16;
+            if (odd)
+            {
+                byte[] nibbles = new byte[input.Length * 2 - 1];
+                nibbles[0] = (byte)(input[0] & 0x0f);
+                for (int i = 0; i < input.Length - 1; i++)
+                {
+                    nibbles[2 * i + 1] = (byte)((input[i+1] & 0xf0) >> 4);
+                    nibbles[2 * i + 2] = (byte)(input[i+1] & 0x0f);
+                }
+
+                return nibbles;
+            }
+            else
+            {
+                byte[] nibbles = new byte[input.Length * 2 - 2];
+                for (int i = 0; i < input.Length - 1; i++)
+                {
+                    nibbles[2 * i] = (byte)((input[i+1] & 0xf0) >> 4);
+                    nibbles[2 * i + 1] = (byte)(input[i+1] & 0x0f);
+                }
+
+                return nibbles;
+            }
+        }
     }
 }
