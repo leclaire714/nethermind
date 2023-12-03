@@ -322,7 +322,7 @@ namespace Nethermind.Trie.Pruning
 
         public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached;
 
-        private byte[] GetNodeStoragePath(Hash256? storageRoot, TreePath path, Hash256 keccak)
+        public static byte[] GetNodeStoragePath(Hash256? storageRoot, TreePath path, Hash256 keccak)
         {
             byte[] pathBytes = new byte[40];
 

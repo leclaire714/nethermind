@@ -377,7 +377,7 @@ namespace Nethermind.Synchronization.FastSync
             try
             {
                 // it finished downloading
-                rootNodeKeyExists = _stateDb.KeyExists(_rootNode);
+                rootNodeKeyExists = _stateDb.KeyExists( TrieStore.GetNodeStoragePath(null, TreePath.Empty, _rootNode));
             }
             catch (ObjectDisposedException)
             {
@@ -524,9 +524,19 @@ namespace Nethermind.Synchronization.FastSync
                 lockToTake.EnterReadLock();
                 try
                 {
-                    IDb dbToCheck = syncItem.NodeDataType == NodeDataType.Code ? _codeDb : _stateDb;
+                    bool keyExists = false;
                     Interlocked.Increment(ref _data.DbChecks);
-                    bool keyExists = dbToCheck.KeyExists(syncItem.Hash);
+                    if (syncItem.NodeDataType == NodeDataType.Code)
+                    {
+                        IDb dbToCheck = _codeDb;
+                        keyExists = dbToCheck.KeyExists(syncItem.Hash);
+                    }
+                    else
+                    {
+                        IDb dbToCheck = _stateDb;
+                        (Hash256? storageRoot, TreePath path) = syncItem.StorageRootAndPath;
+                        keyExists = dbToCheck.KeyExists(TrieStore.GetNodeStoragePath(storageRoot, path, syncItem.Hash));
+                    }
 
                     if (keyExists)
                     {
@@ -618,77 +628,80 @@ namespace Nethermind.Synchronization.FastSync
             switch (syncItem.NodeDataType)
             {
                 case NodeDataType.State:
+                {
+                    Interlocked.Increment(ref _data.SavedStateCount);
+                    _stateDbLock.EnterWriteLock();
+                    try
                     {
-                        Interlocked.Increment(ref _data.SavedStateCount);
-                        _stateDbLock.EnterWriteLock();
-                        try
-                        {
-                            Interlocked.Add(ref _data.DataSize, data.Length);
-                            Interlocked.Increment(ref Metrics.SyncedStateTrieNodes);
-                            _stateDb.Set(syncItem.Hash, data);
-                        }
-                        finally
-                        {
-                            _stateDbLock.ExitWriteLock();
-                        }
+                        Interlocked.Add(ref _data.DataSize, data.Length);
+                        Interlocked.Increment(ref Metrics.SyncedStateTrieNodes);
 
-                        break;
+                        (Hash256? storageRoot, TreePath path) = syncItem.StorageRootAndPath;
+                        _stateDb.Set(TrieStore.GetNodeStoragePath(storageRoot, path, syncItem.Hash), data);
                     }
+                    finally
+                    {
+                        _stateDbLock.ExitWriteLock();
+                    }
+
+                    break;
+                }
                 case NodeDataType.Storage:
+                {
+                    lock (_codesSameAsNodes)
                     {
-                        lock (_codesSameAsNodes)
+                        if (_codesSameAsNodes.Contains(syncItem.Hash))
                         {
-                            if (_codesSameAsNodes.Contains(syncItem.Hash))
+                            _codeDbLock.EnterWriteLock();
+                            try
                             {
-                                _codeDbLock.EnterWriteLock();
-                                try
-                                {
-                                    Interlocked.Add(ref _data.DataSize, data.Length);
-                                    Interlocked.Increment(ref Metrics.SyncedCodes);
-                                    _codeDb.Set(syncItem.Hash, data);
-                                }
-                                finally
-                                {
-                                    _codeDbLock.ExitWriteLock();
-                                }
-
-                                _codesSameAsNodes.Remove(syncItem.Hash);
+                                Interlocked.Add(ref _data.DataSize, data.Length);
+                                Interlocked.Increment(ref Metrics.SyncedCodes);
+                                _codeDb.Set(syncItem.Hash, data);
                             }
-                        }
+                            finally
+                            {
+                                _codeDbLock.ExitWriteLock();
+                            }
 
-                        Interlocked.Increment(ref _data.SavedStorageCount);
-
-                        _stateDbLock.EnterWriteLock();
-                        try
-                        {
-                            Interlocked.Add(ref _data.DataSize, data.Length);
-                            Interlocked.Increment(ref Metrics.SyncedStorageTrieNodes);
-                            _stateDb.Set(syncItem.Hash, data);
+                            _codesSameAsNodes.Remove(syncItem.Hash);
                         }
-                        finally
-                        {
-                            _stateDbLock.ExitWriteLock();
-                        }
-
-                        break;
                     }
-                case NodeDataType.Code:
+
+                    Interlocked.Increment(ref _data.SavedStorageCount);
+
+                    _stateDbLock.EnterWriteLock();
+                    try
                     {
-                        Interlocked.Increment(ref _data.SavedCode);
-                        _codeDbLock.EnterWriteLock();
-                        try
-                        {
-                            Interlocked.Add(ref _data.DataSize, data.Length);
-                            Interlocked.Increment(ref Metrics.SyncedCodes);
-                            _codeDb.Set(syncItem.Hash, data);
-                        }
-                        finally
-                        {
-                            _codeDbLock.ExitWriteLock();
-                        }
-
-                        break;
+                        Interlocked.Add(ref _data.DataSize, data.Length);
+                        Interlocked.Increment(ref Metrics.SyncedStorageTrieNodes);
+                        (Hash256? storageRoot, TreePath path) = syncItem.StorageRootAndPath;
+                        _stateDb.Set(TrieStore.GetNodeStoragePath(storageRoot, path, syncItem.Hash), data);
                     }
+                    finally
+                    {
+                        _stateDbLock.ExitWriteLock();
+                    }
+
+                    break;
+                }
+                case NodeDataType.Code:
+                {
+                    Interlocked.Increment(ref _data.SavedCode);
+                    _codeDbLock.EnterWriteLock();
+                    try
+                    {
+                        Interlocked.Add(ref _data.DataSize, data.Length);
+                        Interlocked.Increment(ref Metrics.SyncedCodes);
+                        _codeDb.Set(syncItem.Hash, data);
+                    }
+                    finally
+                    {
+                        _codeDbLock.ExitWriteLock();
+                    }
+
+                    break;
+                }
             }
 
             if (syncItem.IsRoot)
@@ -768,12 +781,7 @@ namespace Nethermind.Synchronization.FastSync
         private void HandleTrieNode(StateSyncItem currentStateSyncItem, byte[] currentResponseItem, ref int invalidNodes)
         {
             NodeDataType nodeDataType = currentStateSyncItem.NodeDataType;
-            Hash256? account = null;
-            TreePath path = TreePath.FromNibble(currentStateSyncItem.PathNibbles);
-            if ((currentStateSyncItem?.AccountPathNibbles?.Length ?? 0) != 0)
-            {
-                account = new Hash256(Nibbles.ToBytes(currentStateSyncItem.AccountPathNibbles));
-            }
+            (Hash256? account, TreePath path) = currentStateSyncItem.StorageRootAndPath;
 
             TrieNode trieNode = new(NodeType.Unknown, account, path, currentResponseItem);
             trieNode.ResolveNode(NullTrieNodeResolver.Instance); // TODO: will this work now?
@@ -854,13 +862,13 @@ namespace Nethermind.Synchronization.FastSync
 
                         AddNodeResult addResult = AddNodeToPending(
                             new StateSyncItem(
-                                next,
-                                currentStateSyncItem.AccountPathNibbles,
-                                childPath.ToArray(),
-                                nodeDataType,
-                                currentStateSyncItem.Level + trieNode.Key!.Length,
-                                CalculateRightness(trieNode.NodeType, currentStateSyncItem, 0))
-                            { ParentBranchChildIndex = currentStateSyncItem.BranchChildIndex },
+                                    next,
+                                    currentStateSyncItem.AccountPathNibbles,
+                                    childPath.ToArray(),
+                                    nodeDataType,
+                                    currentStateSyncItem.Level + trieNode.Key!.Length,
+                                    CalculateRightness(trieNode.NodeType, currentStateSyncItem, 0))
+                                { ParentBranchChildIndex = currentStateSyncItem.BranchChildIndex },
                             dependentItem,
                             "extension child");
 
@@ -872,7 +880,7 @@ namespace Nethermind.Synchronization.FastSync
                     else
                     {
                         /* this happens when we have a short RLP format of the node
-                                     * that would not be stored as Keccak but full RLP*/
+                         * that would not be stored as Keccak but full RLP*/
                         SaveNode(currentStateSyncItem, currentResponseItem);
                     }
 
