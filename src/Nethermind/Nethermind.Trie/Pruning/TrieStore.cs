@@ -324,7 +324,20 @@ namespace Nethermind.Trie.Pruning
 
         private byte[] GetNodeStoragePath(Hash256? storageRoot, TreePath path, Hash256 keccak)
         {
-            return keccak.Bytes.ToArray();
+            byte[] pathBytes = new byte[40];
+
+            if (storageRoot != null)
+            {
+                storageRoot.Bytes[..4].CopyTo(pathBytes);
+                // Node, this assume Path is zeroed
+                path.Path.BytesAsSpan[..4].CopyTo(pathBytes.AsSpan()[4..]);
+            } else {
+                // I guess we don't actually need 8 byte. 6 byte should be ok enough.
+                path.Path.BytesAsSpan[..8].CopyTo(pathBytes.AsSpan()[4..]);
+            }
+            keccak.Bytes.CopyTo(pathBytes.AsSpan()[8..]);
+
+            return pathBytes;
         }
 
         public byte[] LoadRlp(Hash256? storageRoot, TreePath path, Hash256 keccak, IKeyValueStore? keyValueStore, ReadFlags readFlags = ReadFlags.None)
