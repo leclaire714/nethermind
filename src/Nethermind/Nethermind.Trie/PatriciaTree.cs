@@ -57,7 +57,7 @@ namespace Nethermind.Trie
 
         public TrieNode? RootRef { get; set; }
 
-        public bool IsStorage { get; set; } = false;
+        public bool IsStorage => TrieType == TrieType.Storage;
         public Hash256? StorageRoot => IsStorage ? _rootHash : null;
 
         /// <summary>

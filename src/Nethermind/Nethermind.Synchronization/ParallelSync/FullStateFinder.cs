@@ -47,7 +47,8 @@ public class FullStateFinder : IFullStateFinder
         //   3) the full block state has been synced in the state nodes sync (fast sync)
         // In 2) and 3) the state root will be saved in the database.
         // In fast sync we never save the state root unless all the descendant nodes have been stored in the DB.
-        return stateRootIsInMemory || _stateDb.Get(stateRoot) is not null;
+
+        return stateRootIsInMemory || _stateDb.Get(TrieStore.GetNodeStoragePath(null, TreePath.Empty, stateRoot)) is not null;
     }
 
     public long FindBestFullState()
