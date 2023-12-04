@@ -213,6 +213,7 @@ namespace Nethermind.State
             // _logger.Warn($"Storage block commit {blockNumber}");
             foreach (KeyValuePair<Address, StorageTree> storage in _storages)
             {
+                Console.Out.WriteLine($"Committing storage {storage.Key.ToAccountPath.Bytes.ToHexString()}");
                 storage.Value.Commit(blockNumber);
             }
 

@@ -23,7 +23,7 @@ namespace Nethermind.Trie
 
         private class TrieNodeDecoder
         {
-            public CappedArray<byte> Encode(ISmallTrieNodeResolver tree, TrieNode? item, ICappedArrayPool? bufferPool)
+            public CappedArray<byte> Encode(ISmallTrieNodeResolver tree, TreePath path, TrieNode? item, ICappedArrayPool? bufferPool)
             {
                 Metrics.TreeNodeRlpEncodings++;
 
@@ -34,15 +34,15 @@ namespace Nethermind.Trie
 
                 return item.NodeType switch
                 {
-                    NodeType.Branch => RlpEncodeBranch(tree, item, bufferPool),
-                    NodeType.Extension => EncodeExtension(tree, item, bufferPool),
+                    NodeType.Branch => RlpEncodeBranch(tree, path, item, bufferPool),
+                    NodeType.Extension => EncodeExtension(tree, path, item, bufferPool),
                     NodeType.Leaf => EncodeLeaf(item, bufferPool),
                     _ => throw new TrieException($"An attempt was made to encode a trie node of type {item.NodeType}")
                 };
             }
 
             [SkipLocalsInit]
-            private static CappedArray<byte> EncodeExtension(ISmallTrieNodeResolver tree, TrieNode item, ICappedArrayPool? bufferPool)
+            private static CappedArray<byte> EncodeExtension(ISmallTrieNodeResolver tree, TreePath path, TrieNode item, ICappedArrayPool? bufferPool)
             {
                 Debug.Assert(item.NodeType == NodeType.Extension,
                     $"Node passed to {nameof(EncodeExtension)} is {item.NodeType}");
@@ -61,11 +61,11 @@ namespace Nethermind.Trie
 
                 HexPrefix.CopyToSpan(hexPrefix, isLeaf: false, keyBytes);
 
-                TrieNode nodeRef = item.GetChild(tree, 0);
+                TrieNode nodeRef = item.GetChild(tree, path, 0);
                 Debug.Assert(nodeRef is not null,
                     "Extension child is null when encoding.");
 
-                nodeRef.ResolveKey(tree, false, bufferPool: bufferPool);
+                nodeRef.ResolveKey(tree, path, false, bufferPool: bufferPool);
 
                 int contentLength = Rlp.LengthOf(keyBytes) + (nodeRef.Keccak is null ? nodeRef.FullRlp.Length : Rlp.LengthOfKeccakRlp);
                 int totalLength = Rlp.LengthOfSequence(contentLength);
@@ -130,15 +130,15 @@ namespace Nethermind.Trie
                 return data;
             }
 
-            private static CappedArray<byte> RlpEncodeBranch(ISmallTrieNodeResolver tree, TrieNode item, ICappedArrayPool? pool)
+            private static CappedArray<byte> RlpEncodeBranch(ISmallTrieNodeResolver tree, TreePath path, TrieNode item, ICappedArrayPool? pool)
             {
                 int valueRlpLength = AllowBranchValues ? Rlp.LengthOf(item.Value.AsSpan()) : 1;
-                int contentLength = valueRlpLength + GetChildrenRlpLength(tree, item, pool);
+                int contentLength = valueRlpLength + GetChildrenRlpLength(tree, path, item, pool);
                 int sequenceLength = Rlp.LengthOfSequence(contentLength);
                 CappedArray<byte> result = pool.SafeRentBuffer(sequenceLength);
                 Span<byte> resultSpan = result.AsSpan();
                 int position = Rlp.StartSequence(resultSpan, 0, contentLength);
-                WriteChildrenRlp(tree, item, resultSpan.Slice(position, contentLength - valueRlpLength), pool);
+                WriteChildrenRlp(tree, path, item, resultSpan.Slice(position, contentLength - valueRlpLength), pool);
                 position = sequenceLength - valueRlpLength;
                 if (AllowBranchValues)
                 {
@@ -152,7 +152,7 @@ namespace Nethermind.Trie
                 return result;
             }
 
-            private static int GetChildrenRlpLength(ISmallTrieNodeResolver tree, TrieNode item, ICappedArrayPool? bufferPool)
+            private static int GetChildrenRlpLength(ISmallTrieNodeResolver tree, TreePath path, TrieNode item, ICappedArrayPool? bufferPool)
             {
                 int totalLength = 0;
                 item.InitData();
@@ -177,7 +177,7 @@ namespace Nethermind.Trie
                         else
                         {
                             TrieNode childNode = (TrieNode)item._data[i];
-                            childNode!.ResolveKey(tree, false, bufferPool: bufferPool);
+                            childNode!.ResolveKey(tree, item.GetChildPath(path, i), false, bufferPool: bufferPool);
                             totalLength += childNode.Keccak is null ? childNode.FullRlp.Length : Rlp.LengthOfKeccakRlp;
                         }
                     }
@@ -188,7 +188,7 @@ namespace Nethermind.Trie
                 return totalLength;
             }
 
-            private static void WriteChildrenRlp(ISmallTrieNodeResolver tree, TrieNode item, Span<byte> destination, ICappedArrayPool? bufferPool)
+            private static void WriteChildrenRlp(ISmallTrieNodeResolver tree, TreePath path, TrieNode item, Span<byte> destination, ICappedArrayPool? bufferPool)
             {
                 int position = 0;
                 RlpStream rlpStream = item._rlpStream;
@@ -218,7 +218,7 @@ namespace Nethermind.Trie
                         else
                         {
                             TrieNode childNode = (TrieNode)item._data[i];
-                            childNode!.ResolveKey(tree, false, bufferPool: bufferPool);
+                            childNode!.ResolveKey(tree, path, false, bufferPool: bufferPool);
                             if (childNode.Keccak is null)
                             {
                                 Span<byte> fullRlp = childNode.FullRlp!.AsSpan();

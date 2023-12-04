@@ -12,7 +12,7 @@ namespace Nethermind.Trie.Pruning
 
         public static readonly NullTrieNodeResolver Instance = new();
 
-        public TrieNode FindCachedOrUnknown(TreePath path, Hash256 hash) => new(NodeType.Unknown, path, hash);
+        public TrieNode FindCachedOrUnknown(TreePath path, Hash256 hash) => new(NodeType.Unknown, hash);
         public byte[]? LoadRlp(TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None) => null;
         public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256 storage)
         {
@@ -26,7 +26,7 @@ namespace Nethermind.Trie.Pruning
 
         public static readonly NullFullTrieNodeResolver Instance = new();
 
-        public TrieNode FindCachedOrUnknown(Hash256? address, TreePath path, Hash256 hash) => new(NodeType.Unknown, path, hash);
+        public TrieNode FindCachedOrUnknown(Hash256? address, TreePath path, Hash256 hash) => new(NodeType.Unknown, hash);
         public byte[]? LoadRlp(Hash256? address, TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None) => null;
         public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256 storage)
         {

@@ -26,11 +26,11 @@ public struct TreePath
         return path;
     }
 
-    public static TreePath FromNibble(Span<byte> pathNibbles)
+    public static TreePath FromNibble(ReadOnlySpan<byte> pathNibbles)
     {
         TreePath path = new TreePath();
         Span<byte> pathBytes = stackalloc byte[32];
-        Nibbles.ToBytes(pathNibbles).CopyTo(pathBytes);
+        Nibbles.ToBytesExtra(pathNibbles).CopyTo(pathBytes);
         path.Path = new Hash256(pathBytes);
         path.Length = pathNibbles.Length;
         return path;
@@ -38,6 +38,7 @@ public struct TreePath
 
     public void Append(params byte[] data)
     {
+        if (data == null) return;
         foreach (byte b in data)
         {
             this[Length] = b;

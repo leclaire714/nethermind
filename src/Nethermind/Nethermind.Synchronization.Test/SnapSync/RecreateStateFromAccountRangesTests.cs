@@ -63,8 +63,8 @@ namespace Nethermind.Synchronization.Test.SnapSync
             for (int i = 0; i < (firstProof!).Length; i++)
             {
                 byte[] nodeBytes = (firstProof!)[i];
-                var node = new TrieNode(NodeType.Unknown, TreePath.Empty, nodeBytes);
-                node.ResolveKey(store, i == 0);
+                var node = new TrieNode(NodeType.Unknown, nodeBytes);
+                node.ResolveKey(store, TreePath.Empty, i == 0);
 
                 nodes.Add(node);
                 if (i < (firstProof!).Length - 1)
@@ -78,8 +78,8 @@ namespace Nethermind.Synchronization.Test.SnapSync
             for (int i = 0; i < (lastProof!).Length; i++)
             {
                 byte[] nodeBytes = (lastProof!)[i];
-                var node = new TrieNode(NodeType.Unknown, TreePath.Empty, nodeBytes);
-                node.ResolveKey(store, i == 0);
+                var node = new TrieNode(NodeType.Unknown, nodeBytes);
+                node.ResolveKey(store, TreePath.Empty, i == 0);
 
                 nodes.Add(node);
                 if (i < (lastProof!).Length - 1)

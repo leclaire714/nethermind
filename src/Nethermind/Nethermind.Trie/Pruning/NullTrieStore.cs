@@ -29,7 +29,7 @@ namespace Nethermind.Trie.Pruning
 
         public IKeyValueStore AsKeyValueStore() => null!;
 
-        public TrieNode FindCachedOrUnknown(TreePath treePath, Hash256 hash) => new(NodeType.Unknown, treePath, hash);
+        public TrieNode FindCachedOrUnknown(TreePath treePath, Hash256 hash) => new(NodeType.Unknown, hash);
 
         public byte[] LoadRlp(TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None) => Array.Empty<byte>();
         public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256 storageRoot)

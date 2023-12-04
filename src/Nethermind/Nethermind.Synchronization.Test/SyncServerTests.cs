@@ -660,9 +660,9 @@ namespace Nethermind.Synchronization.Test
                 LimboLogs.Instance);
 
             Hash256 nodeKey = TestItem.KeccakA;
-            TrieNode node = new(NodeType.Leaf, TreePath.Empty, nodeKey, TestItem.KeccakB.Bytes);
+            TrieNode node = new(NodeType.Leaf, nodeKey, TestItem.KeccakB.Bytes);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
-            trieStore.CommitNode(1, new NodeCommitInfo(node));
+            trieStore.CommitNode(1, new NodeCommitInfo(node, TreePath.Empty));
             trieStore.FinishBlockCommit(TrieType.State, 1, node);
 
             stateDb.KeyExists(nodeKey).Should().BeFalse();

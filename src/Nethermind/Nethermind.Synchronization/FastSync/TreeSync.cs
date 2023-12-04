@@ -783,8 +783,8 @@ namespace Nethermind.Synchronization.FastSync
             NodeDataType nodeDataType = currentStateSyncItem.NodeDataType;
             (Hash256? account, TreePath path) = currentStateSyncItem.StorageRootAndPath;
 
-            TrieNode trieNode = new(NodeType.Unknown, path, currentResponseItem);
-            trieNode.ResolveNode(NullTrieNodeResolver.Instance); // TODO: will this work now?
+            TrieNode trieNode = new(NodeType.Unknown, currentResponseItem);
+            trieNode.ResolveNode(NullTrieNodeResolver.Instance, path); // TODO: will this work now?
             switch (trieNode.NodeType)
             {
                 case NodeType.Unknown:
@@ -850,7 +850,7 @@ namespace Nethermind.Synchronization.FastSync
 
                     break;
                 case NodeType.Extension:
-                    Hash256? next = trieNode.GetChild(NullTrieNodeResolver.Instance, 0)?.Keccak;
+                    Hash256? next = trieNode.GetChild(NullTrieNodeResolver.Instance, path, 0)?.Keccak;
                     if (next is not null)
                     {
                         DependentItem dependentItem = new(currentStateSyncItem, currentResponseItem, 1);

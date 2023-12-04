@@ -397,6 +397,12 @@ namespace Nethermind.Trie.Test
             }
         }
 
+        [Test]
+        public void SmallerTest()
+        {
+            Test_add_and_delete_many_next_block(2);
+        }
+
         public void Test_add_and_delete_many_next_block(int i)
         {
             MemDb memDb = new();
@@ -998,6 +1004,7 @@ namespace Nethermind.Trie.Test
 
             for (int blockNumber = 0; blockNumber < blocksCount; blockNumber++)
             {
+                Console.Out.WriteLine($"Block {blockNumber}");
                 bool isEmptyBlock = _random.Next(5) == 0;
                 if (!isEmptyBlock)
                 {

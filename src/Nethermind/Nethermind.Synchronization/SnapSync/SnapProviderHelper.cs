@@ -33,7 +33,7 @@ namespace Nethermind.Synchronization.SnapSync
 
             ValueHash256 lastHash = accounts[^1].Path;
 
-            (AddRangeResult result, List<TrieNode> sortedBoundaryList, bool moreChildrenToRight) =
+            (AddRangeResult result, List<(TrieNode, TreePath)> sortedBoundaryList, bool moreChildrenToRight) =
                 FillBoundaryTree(tree, startingHash, lastHash, limitHash, expectedRootHash, proofs);
 
             if (result != AddRangeResult.OK)
@@ -91,7 +91,7 @@ namespace Nethermind.Synchronization.SnapSync
 
             ValueHash256 lastHash = slots[^1].Path;
 
-            (AddRangeResult result, List<TrieNode> sortedBoundaryList, bool moreChildrenToRight) = FillBoundaryTree(
+            (AddRangeResult result, List<(TrieNode, TreePath)> sortedBoundaryList, bool moreChildrenToRight) = FillBoundaryTree(
                 tree, startingHash, lastHash, ValueKeccak.MaxValue, expectedRootHash, proofs);
 
             if (result != AddRangeResult.OK)
@@ -121,7 +121,7 @@ namespace Nethermind.Synchronization.SnapSync
         }
 
         [SkipLocalsInit]
-        private static (AddRangeResult result, List<TrieNode> sortedBoundaryList, bool moreChildrenToRight) FillBoundaryTree(
+        private static (AddRangeResult result, List<(TrieNode, TreePath)> sortedBoundaryList, bool moreChildrenToRight) FillBoundaryTree(
             PatriciaTree tree,
             in ValueHash256? startingHash,
             in ValueHash256 endHash,
@@ -141,7 +141,7 @@ namespace Nethermind.Synchronization.SnapSync
             }
 
             ValueHash256 effectiveStartingHAsh = startingHash.HasValue ? startingHash.Value : ValueKeccak.Zero;
-            List<TrieNode> sortedBoundaryList = new();
+            List<(TrieNode, TreePath)> sortedBoundaryList = new();
 
             Dictionary<ValueHash256, TrieNode> dict = CreateProofDict(proofs, tree.TrieStore);
 
@@ -167,7 +167,7 @@ namespace Nethermind.Synchronization.SnapSync
 
             tree.RootRef = root;
             proofNodesToProcess.Push((null, root, -1, new List<byte>()));
-            sortedBoundaryList.Add(root);
+            sortedBoundaryList.Add((root, TreePath.Empty));
 
             bool moreChildrenToRight = false;
 
@@ -186,7 +186,7 @@ namespace Nethermind.Synchronization.SnapSync
                             pathIndex += node.Key.Length;
                             path.AddRange(node.Key);
                             proofNodesToProcess.Push((node, child, pathIndex, path));
-                            sortedBoundaryList.Add(child);
+                            sortedBoundaryList.Add((child, TreePath.FromNibble(path.ToArray().AsSpan())));
                         }
                         else
                         {
@@ -243,7 +243,7 @@ namespace Nethermind.Synchronization.SnapSync
                                 };
 
                                 proofNodesToProcess.Push((node, child, pathIndex, newPath));
-                                sortedBoundaryList.Add(child);
+                                sortedBoundaryList.Add((child, TreePath.FromNibble(newPath.ToArray())));
                             }
                         }
                     }
@@ -260,10 +260,10 @@ namespace Nethermind.Synchronization.SnapSync
             for (int i = 0; i < proofs.Length; i++)
             {
                 byte[] proof = proofs[i];
-                TrieNode node = new(NodeType.Unknown, new TreePath(), proof, isDirty: true);
+                TrieNode node = new(NodeType.Unknown, proof, isDirty: true);
                 node.IsBoundaryProofNode = true;
-                node.ResolveNode(store);
-                node.ResolveKey(store, isRoot: i == 0);
+                node.ResolveNode(store, TreePath.Empty);
+                node.ResolveKey(store, TreePath.Empty, isRoot: i == 0);
 
                 dict[node.Keccak] = node;
             }
@@ -271,7 +271,7 @@ namespace Nethermind.Synchronization.SnapSync
             return dict;
         }
 
-        private static void StitchBoundaries(List<TrieNode> sortedBoundaryList, ISmallTrieStore store)
+        private static void StitchBoundaries(List<(TrieNode, TreePath)> sortedBoundaryList, ISmallTrieStore store)
         {
             if (sortedBoundaryList is null || sortedBoundaryList.Count == 0)
             {
@@ -280,13 +280,13 @@ namespace Nethermind.Synchronization.SnapSync
 
             for (int i = sortedBoundaryList.Count - 1; i >= 0; i--)
             {
-                TrieNode node = sortedBoundaryList[i];
+                (TrieNode node, TreePath path) = sortedBoundaryList[i];
 
                 if (!node.IsPersisted)
                 {
                     if (node.IsExtension)
                     {
-                        if (IsChildPersisted(node, 1, store))
+                        if (IsChildPersisted(node, path, 1, store))
                         {
                             node.IsBoundaryProofNode = false;
                         }
@@ -297,7 +297,7 @@ namespace Nethermind.Synchronization.SnapSync
                         bool isBoundaryProofNode = false;
                         for (int ci = 0; ci <= 15; ci++)
                         {
-                            if (!IsChildPersisted(node, ci, store))
+                            if (!IsChildPersisted(node, path, ci, store))
                             {
                                 isBoundaryProofNode = true;
                                 break;
@@ -310,7 +310,7 @@ namespace Nethermind.Synchronization.SnapSync
             }
         }
 
-        private static bool IsChildPersisted(TrieNode node, int childIndex, ISmallTrieStore store)
+        private static bool IsChildPersisted(TrieNode node, TreePath nodePath, int childIndex, ISmallTrieStore store)
         {
             TrieNode data = node.GetData(childIndex) as TrieNode;
             if (data is not null)
@@ -323,7 +323,7 @@ namespace Nethermind.Synchronization.SnapSync
                 return true;
             }
 
-            return store.IsPersisted(node.Path, childKeccak);
+            return store.IsPersisted(node.GetChildPath(nodePath, childIndex), childKeccak);
         }
     }
 }
