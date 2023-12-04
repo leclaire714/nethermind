@@ -18,7 +18,7 @@ public class HealingStorageTree : StorageTree
     private readonly Hash256 _stateRoot;
     private readonly ITrieNodeRecovery<GetTrieNodesRequest>? _recovery;
 
-    public HealingStorageTree(ITrieStore? trieStore, Hash256 rootHash, ILogManager? logManager, Address address, Hash256 stateRoot, ITrieNodeRecovery<GetTrieNodesRequest>? recovery)
+    public HealingStorageTree(ISmallTrieStore? trieStore, Hash256 rootHash, ILogManager? logManager, Address address, Hash256 stateRoot, ITrieNodeRecovery<GetTrieNodesRequest>? recovery)
         : base(trieStore, rootHash, logManager)
     {
         _address = address;

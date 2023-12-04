@@ -44,7 +44,7 @@ namespace Nethermind.Store.Test
             byte[][] lastProof = accountProofCollector.BuildResult().Proof;
 
             MemDb db = new();
-            TrieStore store = new(db, LimboLogs.Instance);
+            ISmallTrieStore store = new TrieStore(db, LimboLogs.Instance).GetTrieStore(null);
             StateTree tree = new(store, LimboLogs.Instance);
 
             IList<TrieNode> nodes = new List<TrieNode>();
@@ -52,7 +52,7 @@ namespace Nethermind.Store.Test
             for (int i = 0; i < (firstProof!).Length; i++)
             {
                 byte[] nodeBytes = (firstProof!)[i];
-                var node = new TrieNode(NodeType.Unknown, null, new TreePath(), nodeBytes);
+                var node = new TrieNode(NodeType.Unknown, new TreePath(), nodeBytes);
                 node.ResolveKey(store, i == 0);
 
                 nodes.Add(node);
@@ -67,7 +67,7 @@ namespace Nethermind.Store.Test
             for (int i = 0; i < (lastProof!).Length; i++)
             {
                 byte[] nodeBytes = (lastProof!)[i];
-                var node = new TrieNode(NodeType.Unknown, null, new TreePath(), nodeBytes);
+                var node = new TrieNode(NodeType.Unknown, new TreePath(), nodeBytes);
                 node.ResolveKey(store, i == 0);
 
                 nodes.Add(node);

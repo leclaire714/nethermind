@@ -7,7 +7,7 @@ using Nethermind.Core.Crypto;
 
 namespace Nethermind.Trie.Pruning
 {
-    public class NullTrieStore : IReadOnlyTrieStore
+    public class NullTrieStore : ISmallReadOnlyTrieStore
     {
         private NullTrieStore() { }
 
@@ -19,7 +19,7 @@ namespace Nethermind.Trie.Pruning
 
         public void HackPersistOnShutdown() { }
 
-        public IReadOnlyTrieStore AsReadOnly(IKeyValueStore keyValueStore) => this;
+        public ISmallReadOnlyTrieStore AsReadOnly(IKeyValueStore keyValueStore) => this;
 
         public event EventHandler<ReorgBoundaryReached> ReorgBoundaryReached
         {
@@ -29,11 +29,15 @@ namespace Nethermind.Trie.Pruning
 
         public IKeyValueStore AsKeyValueStore() => null!;
 
-        public TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath treePath, Hash256 hash) => new(NodeType.Unknown, storageRoot, treePath, hash);
+        public TrieNode FindCachedOrUnknown(TreePath treePath, Hash256 hash) => new(NodeType.Unknown, treePath, hash);
 
-        public byte[] LoadRlp(Hash256? storageRoot, TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None) => Array.Empty<byte>();
+        public byte[] LoadRlp(TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None) => Array.Empty<byte>();
+        public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256 storageRoot)
+        {
+            return this;
+        }
 
-        public bool IsPersisted(in ValueHash256 keccak) => true;
+        public bool IsPersisted(TreePath path, in ValueHash256 keccak) => true;
 
         public void Dispose() { }
 

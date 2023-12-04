@@ -166,7 +166,7 @@ public class InitializeNetwork : IStep
         _api.DisposeStack.Push(_api.Synchronizer);
 
         ISyncServer syncServer = _api.SyncServer = new SyncServer(
-            _api.TrieStore!.AsKeyValueStore(),
+            _api.TrieStore!.AsKeyValueStore(null), // TODO: Does not work anymore
             _api.DbProvider.CodeDb,
             _api.BlockTree,
             _api.ReceiptStorage!,

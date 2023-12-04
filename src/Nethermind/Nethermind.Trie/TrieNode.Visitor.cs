@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Nethermind.Core;
 using Nethermind.Core.Buffers;
+using Nethermind.Core.Crypto;
 using Nethermind.Serialization.Rlp;
 using Nethermind.Trie.Pruning;
 
@@ -30,7 +31,7 @@ namespace Nethermind.Trie
         /// <param name="nextToVisit"></param>
         /// <exception cref="InvalidDataException"></exception>
         /// <exception cref="TrieException"></exception>
-        internal void AcceptResolvedNode(ITreeVisitor visitor, ITrieNodeResolver nodeResolver, SmallTrieVisitContext trieVisitContext, IList<(TrieNode, SmallTrieVisitContext)> nextToVisit)
+        internal void AcceptResolvedNode(ITreeVisitor visitor, ISmallTrieNodeResolver nodeResolver, Hash256? address, SmallTrieVisitContext trieVisitContext, IList<(Hash256?, TrieNode, SmallTrieVisitContext)> nextToVisit)
         {
             switch (NodeType)
             {
@@ -50,7 +51,7 @@ namespace Nethermind.Trie
                                     SmallTrieVisitContext childCtx = trieVisitContext; // Copy
                                     childCtx.BranchChildIndex = (byte?)i;
 
-                                    nextToVisit.Add((child, childCtx));
+                                    nextToVisit.Add((address, child, childCtx));
                                 }
 
                                 if (child.IsPersisted)
@@ -77,7 +78,7 @@ namespace Nethermind.Trie
                             trieVisitContext.Level++;
                             trieVisitContext.BranchChildIndex = null;
 
-                            nextToVisit.Add((child, trieVisitContext));
+                            nextToVisit.Add((address, child, trieVisitContext));
                         }
 
                         break;
@@ -104,9 +105,9 @@ namespace Nethermind.Trie
                                 trieVisitContext.Level++;
                                 trieVisitContext.BranchChildIndex = null;
 
-                                if (TryResolveStorageRoot(nodeResolver, out TrieNode? storageRoot))
+                                if (TryResolveStorageRoot(nodeResolver, out TrieNode? chStorageRoot))
                                 {
-                                    nextToVisit.Add((storageRoot!, trieVisitContext));
+                                    nextToVisit.Add((Path.Path.ToCommitment(), chStorageRoot!, trieVisitContext));
                                 }
                                 else
                                 {
@@ -123,7 +124,7 @@ namespace Nethermind.Trie
             }
         }
 
-        internal void Accept(ITreeVisitor visitor, ITrieNodeResolver nodeResolver, TrieVisitContext trieVisitContext)
+        internal void Accept(ITreeVisitor visitor, ISmallTrieNodeResolver nodeResolver, TrieVisitContext trieVisitContext)
         {
             try
             {
@@ -142,7 +143,7 @@ namespace Nethermind.Trie
                 case NodeType.Branch:
                     {
                         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                        void VisitChild(int i, TrieNode? child, ITrieNodeResolver resolver, ITreeVisitor v, TrieVisitContext context)
+                        void VisitChild(int i, TrieNode? child, ISmallTrieNodeResolver resolver, ITreeVisitor v, TrieVisitContext context)
                         {
                             if (child is not null)
                             {
@@ -161,7 +162,7 @@ namespace Nethermind.Trie
                         }
 
                         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                        void VisitSingleThread(ITreeVisitor treeVisitor, ITrieNodeResolver trieNodeResolver, TrieVisitContext visitContext)
+                        void VisitSingleThread(ITreeVisitor treeVisitor, ISmallTrieNodeResolver trieNodeResolver, TrieVisitContext visitContext)
                         {
                             // single threaded route
                             for (int i = 0; i < BranchesCount; i++)
@@ -171,7 +172,7 @@ namespace Nethermind.Trie
                         }
 
                         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                        void VisitMultiThread(ITreeVisitor treeVisitor, ITrieNodeResolver trieNodeResolver, TrieVisitContext visitContext, TrieNode?[] children)
+                        void VisitMultiThread(ITreeVisitor treeVisitor, ISmallTrieNodeResolver trieNodeResolver, TrieVisitContext visitContext, TrieNode?[] children)
                         {
                             // multithreaded route
                             Parallel.For(0, BranchesCount, i =>

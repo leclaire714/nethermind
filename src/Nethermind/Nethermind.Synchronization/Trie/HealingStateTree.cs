@@ -18,7 +18,7 @@ public class HealingStateTree : StateTree
 
     [DebuggerStepThrough]
     public HealingStateTree(ITrieStore? store, ILogManager? logManager)
-        : base(store, logManager)
+        : base(store.GetTrieStore(null), logManager)
     {
     }
 

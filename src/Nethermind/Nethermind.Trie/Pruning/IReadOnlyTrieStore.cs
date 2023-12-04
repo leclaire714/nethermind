@@ -4,4 +4,5 @@
 namespace Nethermind.Trie.Pruning
 {
     public interface IReadOnlyTrieStore : ITrieStore { }
+    public interface ISmallReadOnlyTrieStore : ISmallTrieStore { }
 }

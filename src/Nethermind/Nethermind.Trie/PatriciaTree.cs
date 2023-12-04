@@ -46,7 +46,7 @@ namespace Nethermind.Trie
 
         private readonly ConcurrentQueue<NodeCommitInfo>? _currentCommit;
 
-        public ITrieStore TrieStore { get; }
+        public ISmallTrieStore TrieStore { get; set; }
         public ICappedArrayPool? _bufferPool;
 
         private readonly bool _parallelBranches;
@@ -58,7 +58,6 @@ namespace Nethermind.Trie
         public TrieNode? RootRef { get; set; }
 
         public bool IsStorage => TrieType == TrieType.Storage;
-        public Hash256? StorageRoot => IsStorage ? _rootHash : null;
 
         /// <summary>
         /// Only used in EthereumTests
@@ -89,6 +88,11 @@ namespace Nethermind.Trie
         }
 
         public PatriciaTree(ITrieStore trieStore, ILogManager logManager, ICappedArrayPool? bufferPool = null)
+            : this(trieStore.GetTrieStore(null), EmptyTreeHash, false, true, logManager, bufferPool: bufferPool)
+        {
+        }
+
+        public PatriciaTree(ISmallTrieStore trieStore, ILogManager logManager, ICappedArrayPool? bufferPool = null)
             : this(trieStore, EmptyTreeHash, false, true, logManager, bufferPool: bufferPool)
         {
         }
@@ -101,7 +105,7 @@ namespace Nethermind.Trie
             ILogManager logManager,
             ICappedArrayPool? bufferPool = null)
             : this(
-                new TrieStore(keyValueStore, logManager),
+                new TrieStore(keyValueStore, logManager).RootStore,
                 rootHash,
                 parallelBranches,
                 allowCommits,
@@ -111,7 +115,7 @@ namespace Nethermind.Trie
         }
 
         public PatriciaTree(
-            ITrieStore? trieStore,
+            ISmallTrieStore? trieStore,
             Hash256 rootHash,
             bool parallelBranches,
             bool allowCommits,
@@ -306,7 +310,7 @@ namespace Nethermind.Trie
             }
             else if (resetObjects)
             {
-                RootRef = TrieStore.FindCachedOrUnknown(StorageRoot, new TreePath(), _rootHash);
+                RootRef = TrieStore.FindCachedOrUnknown(new TreePath(), _rootHash);
             }
         }
 
@@ -430,7 +434,7 @@ namespace Nethermind.Trie
             if (startRootHash is not null)
             {
                 if (_logger.IsTrace) _logger.Trace($"Starting from {startRootHash} - {traverseContext.ToString()}");
-                TrieNode startNode = TrieStore.FindCachedOrUnknown(StorageRoot, new TreePath(), startRootHash);
+                TrieNode startNode = TrieStore.FindCachedOrUnknown(new TreePath(), startRootHash);
                 ResolveNode(startNode, in traverseContext);
                 result = TraverseNode(startNode, in traverseContext);
             }
@@ -1079,7 +1083,7 @@ namespace Nethermind.Trie
             TrieNode rootRef = null;
             if (!rootHash.Equals(Keccak.EmptyTreeHash))
             {
-                rootRef = RootHash == rootHash ? RootRef : TrieStore.FindCachedOrUnknown(StorageRoot, new TreePath(), rootHash);
+                rootRef = RootHash == rootHash ? RootRef : TrieStore.FindCachedOrUnknown(new TreePath(), rootHash);
                 try
                 {
                     rootRef!.ResolveNode(TrieStore);
@@ -1091,7 +1095,7 @@ namespace Nethermind.Trie
                 }
             }
 
-            ITrieNodeResolver resolver = TrieStore;
+            ISmallTrieNodeResolver resolver = TrieStore;
             if (visitor.IsFullDbScan)
             {
                 resolver = new TrieNodeResolverWithReadFlags(TrieStore, ReadFlags.HintCacheMiss);

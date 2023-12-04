@@ -43,7 +43,7 @@ namespace Nethermind.State.Proofs
                 }
             }
 
-            TrieNode trieNode = new(NodeType.Unknown, null, new TreePath(), proof.Last());
+            TrieNode trieNode = new(NodeType.Unknown, new TreePath(), proof.Last());
             trieNode.ResolveNode(null);
 
             return trieNode.Value.ToArray();

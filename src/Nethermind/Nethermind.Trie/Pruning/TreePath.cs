@@ -77,4 +77,9 @@ public struct TreePath
             }
         }
     }
+
+    public override string ToString()
+    {
+        return $"{Length} {Path}";
+    }
 }

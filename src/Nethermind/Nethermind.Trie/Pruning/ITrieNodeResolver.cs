@@ -7,8 +7,7 @@ using Nethermind.Core.Crypto;
 
 namespace Nethermind.Trie.Pruning
 {
-    // TODO: scope out storage root
-    public interface ITrieNodeResolver
+    public interface ISmallTrieNodeResolver
     {
         /// <summary>
         /// Returns a cached and resolved <see cref="TrieNode"/> or a <see cref="TrieNode"/> with Unknown type
@@ -17,13 +16,23 @@ namespace Nethermind.Trie.Pruning
         /// </summary>
         /// <param name="hash">Keccak hash of the RLP of the node.</param>
         /// <returns></returns>
-        TrieNode FindCachedOrUnknown(Hash256? storageRoot, TreePath path, Hash256 hash);
+        TrieNode FindCachedOrUnknown(TreePath path, Hash256 hash);
 
         /// <summary>
         /// Loads RLP of the node.
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        byte[]? LoadRlp(Hash256? storageRoot, TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
+        byte[]? LoadRlp(TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
+
+        ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256? address);
+    }
+
+    // TODO: scope out storage root
+    public interface ITrieNodeResolver
+    {
+        // Transitionary item
+        TrieNode FindCachedOrUnknown(Hash256? address, TreePath path, Hash256 hash);
+        byte[]? LoadRlp(Hash256? address, TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
     }
 }

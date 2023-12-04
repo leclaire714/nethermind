@@ -62,9 +62,9 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Forward_read_flags_on_resolve()
         {
-            ITrieNodeResolver resolver = Substitute.For<ITrieNodeResolver>();
-            resolver.LoadRlp(null, TreePath.Empty, TestItem.KeccakA, ReadFlags.HintReadAhead).Returns((byte[])null);
-            TrieNode trieNode = new(NodeType.Unknown, null, TreePath.Empty, TestItem.KeccakA);
+            ISmallTrieNodeResolver resolver = Substitute.For<ISmallTrieNodeResolver>();
+            resolver.LoadRlp(TreePath.Empty, TestItem.KeccakA, ReadFlags.HintReadAhead).Returns((byte[])null);
+            TrieNode trieNode = new(NodeType.Unknown, TreePath.Empty, TestItem.KeccakA);
             try
             {
                 Assert.Throws<TrieException>(() => trieNode.ResolveNode(resolver, ReadFlags.HintReadAhead));
@@ -72,13 +72,13 @@ namespace Nethermind.Trie.Test
             catch (TrieException)
             {
             }
-            resolver.Received().LoadRlp(null, TreePath.Empty, TestItem.KeccakA, ReadFlags.HintReadAhead);
+            resolver.Received().LoadRlp(TreePath.Empty, TestItem.KeccakA, ReadFlags.HintReadAhead);
         }
 
         [Test]
         public void Throws_trie_exception_on_unexpected_format()
         {
-            TrieNode trieNode = new(NodeType.Unknown, null, TreePath.Empty, new byte[42]);
+            TrieNode trieNode = new(NodeType.Unknown, TreePath.Empty, new byte[42]);
             Assert.Throws<TrieNodeException>(() => trieNode.ResolveNode(NullTrieNodeResolver.Instance));
         }
 
@@ -92,7 +92,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void When_resolving_an_unknown_node_without_rlp_trie_exception_should_be_thrown()
         {
-            TrieNode trieNode = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             Assert.Throws<TrieException>(() => trieNode.ResolveNode(NullTrieNodeResolver.Instance));
         }
 
@@ -154,7 +154,7 @@ namespace Nethermind.Trie.Test
                 }
 
                 CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
-                TrieNode restoredNode = new(NodeType.Branch, null, TreePath.Empty, rlp);
+                TrieNode restoredNode = new(NodeType.Branch, TreePath.Empty, rlp);
 
                 for (int childIndex = 0; childIndex < 16; childIndex++)
                 {
@@ -181,7 +181,7 @@ namespace Nethermind.Trie.Test
 
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
 
-            TrieNode decoded = new(NodeType.Unknown, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Unknown, TreePath.Empty, rlp);
             decoded.ResolveNode(NullTrieNodeResolver.Instance);
             TrieNode decodedTiniest = decoded.GetChild(NullTrieNodeResolver.Instance, 11);
             decodedTiniest.ResolveNode(NullTrieNodeResolver.Instance);
@@ -199,7 +199,7 @@ namespace Nethermind.Trie.Test
 
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
 
-            TrieNode decoded = new(NodeType.Unknown, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Unknown, TreePath.Empty, rlp);
             decoded.ResolveNode(NullTrieNodeResolver.Instance);
             TrieNode decodedTiniest = decoded.GetChild(NullTrieNodeResolver.Instance, 11);
 
@@ -216,7 +216,7 @@ namespace Nethermind.Trie.Test
 
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
 
-            TrieNode decoded = new(NodeType.Unknown, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Unknown, TreePath.Empty, rlp);
             decoded.ResolveNode(NullTrieNodeResolver.Instance);
             TrieNode? decodedTiniest = decoded.GetChild(NullTrieNodeResolver.Instance, 0);
             decodedTiniest?.ResolveNode(NullTrieNodeResolver.Instance);
@@ -236,7 +236,7 @@ namespace Nethermind.Trie.Test
 
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
 
-            TrieNode decoded = new(NodeType.Unknown, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Unknown, TreePath.Empty, rlp);
             decoded.ResolveNode(NullTrieNodeResolver.Instance);
             TrieNode decodedTiniest = decoded.GetChild(NullTrieNodeResolver.Instance, 0);
 
@@ -263,7 +263,7 @@ namespace Nethermind.Trie.Test
             TrieNode trieNode = new(NodeType.Branch);
             trieNode[11] = ctx.HeavyLeaf;
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
-            TrieNode decoded = new(NodeType.Branch, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Branch, TreePath.Empty, rlp);
 
             Hash256 getResult = decoded.GetChildHash(11);
             Assert.NotNull(getResult);
@@ -277,7 +277,7 @@ namespace Nethermind.Trie.Test
 
             trieNode[11] = ctx.TiniestLeaf;
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
-            TrieNode decoded = new(NodeType.Branch, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Branch, TreePath.Empty, rlp);
 
             Hash256 getResult = decoded.GetChildHash(11);
             Assert.Null(getResult);
@@ -291,7 +291,7 @@ namespace Nethermind.Trie.Test
             trieNode[0] = ctx.HeavyLeaf;
             trieNode.Key = new byte[] { 5 };
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
-            TrieNode decoded = new(NodeType.Extension, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Extension, TreePath.Empty, rlp);
 
             Hash256 getResult = decoded.GetChildHash(0);
             Assert.NotNull(getResult);
@@ -305,7 +305,7 @@ namespace Nethermind.Trie.Test
             trieNode[0] = ctx.TiniestLeaf;
             trieNode.Key = new byte[] { 5 };
             CappedArray<byte> rlp = trieNode.RlpEncode(NullTrieNodeResolver.Instance);
-            TrieNode decoded = new(NodeType.Extension, null, TreePath.Empty, rlp);
+            TrieNode decoded = new(NodeType.Extension, TreePath.Empty, rlp);
 
             Hash256 getResult = decoded.GetChildHash(0);
             Assert.Null(getResult);
@@ -474,7 +474,7 @@ namespace Nethermind.Trie.Test
         public void Is_child_dirty_on_extension_when_child_is_not_dirty_returns_false()
         {
             TrieNode node = new(NodeType.Extension);
-            TrieNode cleanChild = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
+            TrieNode cleanChild = new(NodeType.Leaf, TreePath.Empty, Keccak.Zero);
             node.SetChild(0, cleanChild);
             Assert.False(node.IsChildDirty(0));
         }
@@ -518,7 +518,7 @@ namespace Nethermind.Trie.Test
 
             CappedArray<byte> rlp = node.RlpEncode(NullTrieNodeResolver.Instance);
 
-            TrieNode restoredNode = new(NodeType.Branch, null, TreePath.Empty, rlp);
+            TrieNode restoredNode = new(NodeType.Branch, TreePath.Empty, rlp);
 
             restoredNode.RlpEncode(NullTrieNodeResolver.Instance);
         }
@@ -585,7 +585,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Size_of_an_unknown_node_with_keccak_is_correct()
         {
-            TrieNode trieNode = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             trieNode.GetMemorySize(false).Should().Be(104);
         }
 
@@ -616,7 +616,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Size_of_an_unknown_node_with_full_rlp_is_correct()
         {
-            TrieNode trieNode = new(NodeType.Unknown, null, TreePath.Empty, new byte[7]);
+            TrieNode trieNode = new(NodeType.Unknown, TreePath.Empty, new byte[7]);
             trieNode.GetMemorySize(false).Should().Be(120);
         }
 
@@ -657,21 +657,21 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Cannot_seal_already_sealed()
         {
-            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Leaf, TreePath.Empty, Keccak.Zero);
             Assert.Throws<InvalidOperationException>(() => trieNode.Seal());
         }
 
         [Test]
         public void Cannot_change_value_on_sealed()
         {
-            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Leaf, TreePath.Empty, Keccak.Zero);
             Assert.Throws<InvalidOperationException>(() => trieNode.Value = new byte[5]);
         }
 
         [Test]
         public void Cannot_change_key_on_sealed()
         {
-            TrieNode trieNode = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Leaf, TreePath.Empty, Keccak.Zero);
             Assert.Throws<InvalidOperationException>(
                 () => trieNode.Key = Bytes.FromHexString("aaa"));
         }
@@ -679,15 +679,15 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Cannot_set_child_on_sealed()
         {
-            TrieNode child = new(NodeType.Leaf, null, TreePath.Empty, Keccak.Zero);
-            TrieNode trieNode = new(NodeType.Extension, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Leaf, TreePath.Empty, Keccak.Zero);
+            TrieNode trieNode = new(NodeType.Extension, TreePath.Empty, Keccak.Zero);
             Assert.Throws<InvalidOperationException>(() => trieNode.SetChild(0, child));
         }
 
         [Test]
         public void Pruning_regression()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
@@ -699,7 +699,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Extension_child_as_keccak()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
@@ -710,7 +710,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Extension_child_as_keccak_memory_size()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
@@ -721,7 +721,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Extension_child_as_keccak_clone()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
@@ -734,7 +734,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Unresolve_of_persisted()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
             trieNode.Key = Bytes.FromHexString("abcd");
@@ -765,7 +765,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Extension_child_as_keccak_not_dirty()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
@@ -777,7 +777,7 @@ namespace Nethermind.Trie.Test
         [TestCase(false)]
         public void Extension_child_as_keccak_call_recursively(bool skipPersisted)
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
@@ -790,7 +790,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Branch_child_as_keccak_encode()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Branch);
             trieNode.SetChild(0, child);
             trieNode.SetChild(4, child);
@@ -802,14 +802,14 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Branch_child_as_keccak_resolved()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Branch);
             trieNode.SetChild(0, child);
             trieNode.SetChild(4, child);
 
             trieNode.PrunePersistedRecursively(1);
-            var trieStore = Substitute.For<ITrieNodeResolver>();
-            trieStore.FindCachedOrUnknown(Arg.Any<Hash256?>(), Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(child);
+            var trieStore = Substitute.For<ISmallTrieNodeResolver>();
+            trieStore.FindCachedOrUnknown(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(child);
             trieNode.GetChild(trieStore, 0).Should().Be(child);
             trieNode.GetChild(trieStore, 1).Should().BeNull();
             trieNode.GetChild(trieStore, 4).Should().Be(child);
@@ -818,13 +818,13 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Child_as_keccak_cached()
         {
-            TrieNode child = new(NodeType.Unknown, null, TreePath.Empty, Keccak.Zero);
+            TrieNode child = new(NodeType.Unknown, TreePath.Empty, Keccak.Zero);
             TrieNode trieNode = new(NodeType.Extension);
             trieNode.SetChild(0, child);
 
             trieNode.PrunePersistedRecursively(1);
-            var trieStore = Substitute.For<ITrieNodeResolver>();
-            trieStore.FindCachedOrUnknown(Arg.Any<Hash256?>(), Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(child);
+            var trieStore = Substitute.For<ISmallTrieNodeResolver>();
+            trieStore.FindCachedOrUnknown(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(child);
             trieNode.GetChild(trieStore, 0).Should().Be(child);
         }
 
@@ -840,12 +840,12 @@ namespace Nethermind.Trie.Test
             trieNode.SetChild(0, child);
             trieNode.Seal();
 
-            ITrieNodeResolver trieStore = Substitute.For<ITrieNodeResolver>();
-            trieStore.LoadRlp(Arg.Any<Hash256?>(), Arg.Any<TreePath>(), Arg.Any<Hash256>()).Throws(new TrieException());
+            ISmallTrieNodeResolver trieStore = Substitute.For<ISmallTrieNodeResolver>();
+            trieStore.LoadRlp(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Throws(new TrieException());
             child.ResolveKey(trieStore, false);
             child.IsPersisted = true;
 
-            trieStore.FindCachedOrUnknown(Arg.Any<Hash256?>(), Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(new TrieNode(NodeType.Unknown, null, TreePath.Empty, child.Keccak!));
+            trieStore.FindCachedOrUnknown(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(new TrieNode(NodeType.Unknown, TreePath.Empty, child.Keccak!));
             trieNode.GetChild(trieStore, 0);
             Assert.Throws<TrieException>(() => trieNode.GetChild(trieStore, 0).ResolveNode(trieStore));
         }
@@ -857,11 +857,11 @@ namespace Nethermind.Trie.Test
             TrieNode trieNode = new(NodeType.Branch);
             for (int i = 0; i < 16; i++)
             {
-                trieNode.SetChild(i, new TrieNode(NodeType.Unknown, null, TreePath.Empty, TestItem.Keccaks[i]));
+                trieNode.SetChild(i, new TrieNode(NodeType.Unknown, TreePath.Empty, TestItem.Keccaks[i]));
             }
 
             trieNode.Seal();
-            trieNode.ResolveKey(Substitute.For<ITrieNodeResolver>(), false);
+            trieNode.ResolveKey(Substitute.For<ISmallTrieNodeResolver>(), false);
 
             void CheckChildren()
             {
@@ -893,7 +893,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Rlp_is_cloned_when_cloning()
         {
-            TrieStore trieStore = new(new MemDb(), NullLogManager.Instance);
+            ISmallTrieStore trieStore = new TrieStore(new MemDb(), NullLogManager.Instance).GetTrieStore(null);
 
             TrieNode leaf1 = new(NodeType.Leaf);
             leaf1.Key = Bytes.FromHexString("abc");
@@ -916,7 +916,7 @@ namespace Nethermind.Trie.Test
             trieNode.ResolveKey(trieStore, true);
             CappedArray<byte> rlp = trieNode.FullRlp;
 
-            TrieNode restoredBranch = new(NodeType.Branch, null, TreePath.Empty, rlp);
+            TrieNode restoredBranch = new(NodeType.Branch, TreePath.Empty, rlp);
 
             TrieNode clone = restoredBranch.Clone();
             var restoredLeaf1 = clone.GetChild(trieStore, 1);
@@ -939,7 +939,7 @@ namespace Nethermind.Trie.Test
 
             CappedArray<byte> rlp = node.RlpEncode(NullTrieNodeResolver.Instance);
 
-            TrieNode restoredNode = new(NodeType.Branch, null, TreePath.Empty, rlp);
+            TrieNode restoredNode = new(NodeType.Branch, TreePath.Empty, rlp);
 
             Parallel.For(0, 32, (index, _) => restoredNode.GetChild(NullTrieNodeResolver.Instance, index % 3));
         }

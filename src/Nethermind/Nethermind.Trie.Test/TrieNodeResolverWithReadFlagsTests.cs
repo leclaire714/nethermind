@@ -19,11 +19,11 @@ public class TrieNodeResolverWithReadFlagsTests
         ReadFlags theFlags = ReadFlags.HintCacheMiss;
         TestMemDb memDb = new();
         ITrieStore trieStore = new TrieStore(memDb, LimboLogs.Instance);
-        TrieNodeResolverWithReadFlags resolver = new(trieStore, theFlags);
+        TrieNodeResolverWithReadFlags resolver = new(trieStore.GetTrieStore(null), theFlags);
 
         Hash256 theKeccak = TestItem.KeccakA;
         memDb[theKeccak.Bytes] = TestItem.KeccakA.BytesToArray();
-        resolver.LoadRlp(null, new TreePath(), theKeccak);
+        resolver.LoadRlp(new TreePath(), theKeccak);
 
         memDb.KeyWasReadWithFlags(theKeccak.BytesToArray(), theFlags);
     }
@@ -34,11 +34,11 @@ public class TrieNodeResolverWithReadFlagsTests
         ReadFlags theFlags = ReadFlags.HintCacheMiss;
         TestMemDb memDb = new();
         ITrieStore trieStore = new TrieStore(memDb, LimboLogs.Instance);
-        TrieNodeResolverWithReadFlags resolver = new(trieStore, theFlags);
+        TrieNodeResolverWithReadFlags resolver = new(trieStore.GetTrieStore(null), theFlags);
 
         Hash256 theKeccak = TestItem.KeccakA;
         memDb[theKeccak.Bytes] = TestItem.KeccakA.BytesToArray();
-        resolver.LoadRlp(null, new TreePath(), theKeccak, ReadFlags.HintReadAhead);
+        resolver.LoadRlp(new TreePath(), theKeccak, ReadFlags.HintReadAhead);
 
         memDb.KeyWasReadWithFlags(theKeccak.BytesToArray(), theFlags | ReadFlags.HintReadAhead);
     }

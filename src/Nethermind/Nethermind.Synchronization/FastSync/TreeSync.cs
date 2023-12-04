@@ -783,7 +783,7 @@ namespace Nethermind.Synchronization.FastSync
             NodeDataType nodeDataType = currentStateSyncItem.NodeDataType;
             (Hash256? account, TreePath path) = currentStateSyncItem.StorageRootAndPath;
 
-            TrieNode trieNode = new(NodeType.Unknown, account, path, currentResponseItem);
+            TrieNode trieNode = new(NodeType.Unknown, path, currentResponseItem);
             trieNode.ResolveNode(NullTrieNodeResolver.Instance); // TODO: will this work now?
             switch (trieNode.NodeType)
             {

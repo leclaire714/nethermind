@@ -35,7 +35,7 @@ public class HealingTreeTests
     [Test]
     public void get_storage_tree_works()
     {
-        HealingStorageTree stateTree = new(Substitute.For<ITrieStore>(), Keccak.EmptyTreeHash, LimboLogs.Instance, TestItem.AddressA, TestItem.KeccakA, null);
+        HealingStorageTree stateTree = new(Substitute.For<ISmallTrieStore>(), Keccak.EmptyTreeHash, LimboLogs.Instance, TestItem.AddressA, TestItem.KeccakA, null);
         stateTree.Get(stackalloc byte[] { 1, 2, 3 });
     }
 
@@ -63,7 +63,7 @@ public class HealingTreeTests
     public void recovery_works_storage_trie([Values(true, false)] bool isMainThread, [Values(true, false)] bool successfullyRecovered)
     {
         HealingStorageTree CreateHealingStorageTree(ITrieStore trieStore, ITrieNodeRecovery<GetTrieNodesRequest> recovery) =>
-            new(trieStore, Keccak.EmptyTreeHash, LimboLogs.Instance, TestItem.AddressA, _key, recovery);
+            new(trieStore.GetTrieStore(null), Keccak.EmptyTreeHash, LimboLogs.Instance, TestItem.AddressA, _key, recovery);
         byte[] path = { 1, 2 };
         byte[] addressPath = ValueKeccak.Compute(TestItem.AddressA.Bytes).Bytes.ToArray();
         recovery_works(isMainThread, successfullyRecovered, path, CreateHealingStorageTree,
@@ -83,7 +83,7 @@ public class HealingTreeTests
             k => throw new MissingTrieNodeException("", new TrieNodeException("", _key), path, 1),
             k => new TrieNode(NodeType.Leaf) { Key = path });
         TestMemDb db = new();
-        trieStore.AsKeyValueStore().Returns(db);
+        trieStore.AsKeyValueStore(null).Returns(db);
 
         ITrieNodeRecovery<GetTrieNodesRequest> recovery = Substitute.For<ITrieNodeRecovery<GetTrieNodesRequest>>();
         recovery.CanRecover.Returns(isMainThread);

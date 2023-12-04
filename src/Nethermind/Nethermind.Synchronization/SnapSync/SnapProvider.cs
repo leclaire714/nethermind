@@ -72,7 +72,7 @@ namespace Nethermind.Synchronization.SnapSync
             ITrieStore store = _trieStorePool.Get();
             try
             {
-                StateTree tree = new(store, _logManager);
+                StateTree tree = new(store.GetTrieStore(null), _logManager);
 
                 ValueHash256 effectiveHashLimit = hashLimit.HasValue ? hashLimit.Value : ValueKeccak.MaxValue;
 
@@ -161,7 +161,7 @@ namespace Nethermind.Synchronization.SnapSync
         public AddRangeResult AddStorageRange(long blockNumber, PathWithAccount pathWithAccount, in ValueHash256 expectedRootHash, in ValueHash256? startingHash, PathWithStorageSlot[] slots, byte[][]? proofs = null)
         {
             ITrieStore store = _trieStorePool.Get();
-            StorageTree tree = new(store, _logManager);
+            StorageTree tree = new(store.GetTrieStore(pathWithAccount.Path.ToCommitment()), _logManager);
             try
             {
                 (AddRangeResult result, bool moreChildrenToRight) = SnapProviderHelper.AddStorageRange(tree, blockNumber, startingHash, slots, expectedRootHash, proofs);
@@ -225,9 +225,9 @@ namespace Nethermind.Synchronization.SnapSync
                         {
                             TreePath path = TreePath.FromPath(requestedPath.PathAndAccount.Path.Bytes);
 
-                            TrieNode node = new(NodeType.Unknown, null, path, nodeData, isDirty: true);
-                            node.ResolveNode(store);
-                            node.ResolveKey(store, true);
+                            TrieNode node = new(NodeType.Unknown, path, nodeData, isDirty: true);
+                            node.ResolveNode(store.GetTrieStore(null));
+                            node.ResolveKey(store.GetTrieStore(null), true);
 
                             requestedPath.PathAndAccount.Account = requestedPath.PathAndAccount.Account.WithChangedStorageRoot(node.Keccak);
 

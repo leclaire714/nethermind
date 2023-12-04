@@ -643,9 +643,9 @@ namespace Nethermind.Synchronization.Test
             BlockTree localBlockTree = Build.A.BlockTree().OfChainLength(600).TestObject;
             ISealValidator sealValidator = Substitute.For<ISealValidator>();
             MemDb stateDb = new();
-            TrieStore trieStore = new(stateDb, Prune.WhenCacheReaches(10.MB()), NoPersistence.Instance, LimboLogs.Instance);
+            TrieStore fullTrieStore = new(stateDb, Prune.WhenCacheReaches(10.MB()), NoPersistence.Instance, LimboLogs.Instance);
             ctx.SyncServer = new SyncServer(
-                trieStore.AsKeyValueStore(),
+                fullTrieStore.AsKeyValueStore(null),
                 new MemDb(),
                 localBlockTree,
                 NullReceiptStorage.Instance,
@@ -660,7 +660,8 @@ namespace Nethermind.Synchronization.Test
                 LimboLogs.Instance);
 
             Hash256 nodeKey = TestItem.KeccakA;
-            TrieNode node = new(NodeType.Leaf, null, TreePath.Empty, nodeKey, TestItem.KeccakB.Bytes);
+            TrieNode node = new(NodeType.Leaf, TreePath.Empty, nodeKey, TestItem.KeccakB.Bytes);
+            ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
             trieStore.CommitNode(1, new NodeCommitInfo(node));
             trieStore.FinishBlockCommit(TrieType.State, 1, node);
 

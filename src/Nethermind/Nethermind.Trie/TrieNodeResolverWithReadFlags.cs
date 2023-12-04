@@ -7,29 +7,34 @@ using Nethermind.Trie.Pruning;
 
 namespace Nethermind.Trie;
 
-public class TrieNodeResolverWithReadFlags : ITrieNodeResolver
+public class TrieNodeResolverWithReadFlags : ISmallTrieNodeResolver
 {
-    private readonly ITrieStore _baseResolver;
+    private readonly ISmallTrieStore _baseResolver;
     private readonly ReadFlags _defaultFlags;
 
-    public TrieNodeResolverWithReadFlags(ITrieStore baseResolver, ReadFlags defaultFlags)
+    public TrieNodeResolverWithReadFlags(ISmallTrieStore baseResolver, ReadFlags defaultFlags)
     {
         _baseResolver = baseResolver;
         _defaultFlags = defaultFlags;
     }
 
-    public TrieNode FindCachedOrUnknown(Hash256 storageRoot, TreePath treePath, Hash256 hash)
+    public TrieNode FindCachedOrUnknown(TreePath treePath, Hash256 hash)
     {
-        return _baseResolver.FindCachedOrUnknown(storageRoot, treePath, hash);
+        return _baseResolver.FindCachedOrUnknown(treePath, hash);
     }
 
-    public byte[]? LoadRlp(Hash256 storageRoot, TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None)
+    public byte[]? LoadRlp(TreePath treePath, Hash256 hash, ReadFlags flags = ReadFlags.None)
     {
         if (flags != ReadFlags.None)
         {
-            return _baseResolver.LoadRlp(storageRoot, treePath, hash, flags | _defaultFlags);
+            return _baseResolver.LoadRlp(treePath, hash, flags | _defaultFlags);
         }
 
-        return _baseResolver.LoadRlp(storageRoot, treePath, hash, _defaultFlags);
+        return _baseResolver.LoadRlp(treePath, hash, _defaultFlags);
+    }
+
+    public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256 address)
+    {
+        return _baseResolver.GetStorageTrieNodeResolver(address);
     }
 }

@@ -70,7 +70,7 @@ namespace Nethermind.Synchronization.Test.FastSync
                     .Set(TestItem.Addresses[i], TrieScenarios.AccountJustState0.WithChangedBalance(i)
                         .WithChangedNonce(1)
                         .WithChangedCodeHash(Keccak.Compute(TrieScenarios.Code3))
-                        .WithChangedStorageRoot(SetStorage(dbContext.RemoteTrieStore, i).RootHash));
+                        .WithChangedStorageRoot(SetStorage(dbContext.RemoteTrieStore, i, TestItem.Addresses[i]).RootHash));
 
             dbContext.RemoteStateTree.UpdateRootHash();
             dbContext.RemoteStateTree.Commit(0);
@@ -88,7 +88,7 @@ namespace Nethermind.Synchronization.Test.FastSync
                     .Set(TestItem.Addresses[i], TrieScenarios.AccountJustState0.WithChangedBalance(i)
                         .WithChangedNonce(2)
                         .WithChangedCodeHash(Keccak.Compute(TrieScenarios.Code3))
-                        .WithChangedStorageRoot(SetStorage(dbContext.RemoteTrieStore, (byte)(i % 7)).RootHash));
+                        .WithChangedStorageRoot(SetStorage(dbContext.RemoteTrieStore, (byte)(i % 7), TestItem.Addresses[i]).RootHash));
 
             dbContext.RemoteStateTree.UpdateRootHash();
             dbContext.RemoteStateTree.Commit(0);
@@ -253,7 +253,7 @@ namespace Nethermind.Synchronization.Test.FastSync
             testCase.SetupTree(dbContext.RemoteStateTree, dbContext.RemoteTrieStore, dbContext.RemoteCodeDb);
 
 
-            StorageTree remoteStorageTree = new(dbContext.RemoteTrieStore, Keccak.EmptyTreeHash, LimboLogs.Instance);
+            StorageTree remoteStorageTree = new(dbContext.RemoteTrieStore.GetTrieStore(TestItem.AddressD.ToAccountPath), Keccak.EmptyTreeHash, LimboLogs.Instance);
             remoteStorageTree.Set(
                 Bytes.FromHexString("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeb000"), new byte[] { 1 });
             remoteStorageTree.Set(
@@ -311,7 +311,7 @@ namespace Nethermind.Synchronization.Test.FastSync
 
             dbContext.RemoteCodeDb.Set(Keccak.Compute(TrieScenarios.Code0), TrieScenarios.Code0);
 
-            StorageTree remoteStorageTree = new(dbContext.RemoteTrieStore, Keccak.EmptyTreeHash, _logManager);
+            StorageTree remoteStorageTree = new(dbContext.RemoteTrieStore.GetTrieStore(TestItem.AddressD.ToAccountPath), Keccak.EmptyTreeHash, _logManager);
             remoteStorageTree.Set((UInt256)1, new byte[] { 1 });
             remoteStorageTree.Commit(0);
 
@@ -335,8 +335,7 @@ namespace Nethermind.Synchronization.Test.FastSync
             DbContext dbContext = new(_logger, _logManager);
             testCase.SetupTree(dbContext.RemoteStateTree, dbContext.RemoteTrieStore, dbContext.RemoteCodeDb);
 
-
-            StorageTree remoteStorageTree = new(dbContext.RemoteTrieStore, Keccak.EmptyTreeHash, _logManager);
+            StorageTree remoteStorageTree = new(dbContext.RemoteTrieStore.GetTrieStore(TestItem.AddressD.ToAccountPath), Keccak.EmptyTreeHash, _logManager);
             remoteStorageTree.Set((UInt256)1, new byte[] { 1 });
             remoteStorageTree.Commit(0);
 
