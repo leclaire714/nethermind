@@ -32,7 +32,7 @@ namespace Nethermind.Trie
         private static object _nullNode = new();
         private static TrieNodeDecoder _nodeDecoder = new();
         private static AccountDecoder _accountDecoder = new();
-        private static Action<TrieNode, TreePath> _markPersisted => (tn, _) => tn.IsPersisted = true;
+        private static Action<TrieNode, Hash256?, TreePath> _markPersisted => (tn, _, _) => tn.IsPersisted = true;
         private RlpStream? _rlpStream;
         private object?[]? _data;
 
@@ -729,7 +729,8 @@ namespace Nethermind.Trie
         /// Note that nodes referenced by hash are not called.
         /// </summary>
         public void CallRecursively(
-            Action<TrieNode, TreePath> action,
+            Action<TrieNode, Hash256?, TreePath> action,
+            Hash256? storageAddress,
             TreePath currentPath,
             ISmallTrieNodeResolver resolver,
             bool skipPersisted,
@@ -752,7 +753,7 @@ namespace Nethermind.Trie
                         if (o is TrieNode child)
                         {
                             if (logger.IsTrace) logger.Trace($"Persist recursively on child {i} {child} of {this}");
-                            child.CallRecursively(action, GetChildPath(currentPath, i), resolver, skipPersisted, logger);
+                            child.CallRecursively(action, storageAddress, GetChildPath(currentPath, i), resolver, skipPersisted, logger);
                         }
                     }
                 }
@@ -760,14 +761,18 @@ namespace Nethermind.Trie
             else
             {
                 TrieNode? storageRoot = _storageRoot;
-                if (storageRoot is not null || (resolveStorageRoot && TryResolveStorageRoot(resolver, out storageRoot)))
+                if (storageRoot is not null || (resolveStorageRoot && TryResolveStorageRoot(resolver, currentPath, out storageRoot)))
                 {
                     if (logger.IsTrace) logger.Trace($"Persist recursively on storage root {_storageRoot} of {this}");
-                    storageRoot!.CallRecursively(action, TreePath.Empty, resolver, skipPersisted, logger);
+                    TreePath storagePath = currentPath;
+                    storagePath.Append(Key);
+                    if (storagePath.Length != 64) throw new Exception("unexpected storage length");
+
+                    storageRoot!.CallRecursively(action, storagePath.Path.ToCommitment(), TreePath.Empty, resolver.GetStorageTrieNodeResolver(storagePath.Path.ToCommitment()), skipPersisted, logger);
                 }
             }
 
-            action(this, currentPath);
+            action(this, storageAddress, currentPath);
         }
 
         /// <summary>
@@ -825,7 +830,7 @@ namespace Nethermind.Trie
 
         #region private
 
-        private bool TryResolveStorageRoot(ISmallTrieNodeResolver resolver, out TrieNode? storageRoot)
+        private bool TryResolveStorageRoot(ISmallTrieNodeResolver resolver, TreePath currentPath, out TrieNode? storageRoot)
         {
             bool hasStorage = false;
             storageRoot = _storageRoot;
@@ -838,11 +843,14 @@ namespace Nethermind.Trie
                 }
                 else if (Value.Length > 64) // if not a storage leaf
                 {
-                    Hash256 storageRootKey = _accountDecoder.DecodeStorageRootOnly(Value.AsRlpStream());
-                    if (storageRootKey != Nethermind.Core.Crypto.Keccak.EmptyTreeHash)
+                    Hash256 storageHash = _accountDecoder.DecodeStorageRootOnly(Value.AsRlpStream());
+                    if (storageHash != Nethermind.Core.Crypto.Keccak.EmptyTreeHash)
                     {
+                        TreePath storagePath = currentPath;
+                        storagePath.Append(Key);
                         hasStorage = true;
-                        _storageRoot = storageRoot = resolver.GetStorageTrieNodeResolver(storageRootKey).FindCachedOrUnknown(new TreePath(), storageRootKey);
+                        _storageRoot = storageRoot = resolver.GetStorageTrieNodeResolver(storagePath.Path.ToCommitment())
+                            .FindCachedOrUnknown(new TreePath(), storageHash);
                     }
                 }
             }
@@ -930,7 +938,7 @@ namespace Nethermind.Trie
 
                             if (IsPersisted && !child.IsPersisted)
                             {
-                                child.CallRecursively(_markPersisted, GetChildPath(currentPath, i), tree, false, NullLogger.Instance);
+                                child.CallRecursively(_markPersisted, null, GetChildPath(currentPath, i), tree, false, NullLogger.Instance);
                             }
 
                             break;

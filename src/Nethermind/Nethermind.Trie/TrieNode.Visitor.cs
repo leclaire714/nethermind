@@ -111,7 +111,7 @@ namespace Nethermind.Trie
                                 trieVisitContext.Level++;
                                 trieVisitContext.BranchChildIndex = null;
 
-                                if (TryResolveStorageRoot(nodeResolver, out TrieNode? chStorageRoot))
+                                if (TryResolveStorageRoot(nodeResolver, path, out TrieNode? chStorageRoot))
                                 {
                                     TreePath storage = path;
                                     storage.Append(Key);
@@ -274,9 +274,11 @@ namespace Nethermind.Trie
                                 trieVisitContext.Level++;
                                 trieVisitContext.BranchChildIndex = null;
 
-                                if (TryResolveStorageRoot(nodeResolver, out TrieNode? storageRoot))
+                                if (TryResolveStorageRoot(nodeResolver, path, out TrieNode? storageRoot))
                                 {
-                                    storageRoot!.Accept(visitor, nodeResolver, TreePath.Empty, trieVisitContext);
+                                    TreePath storageAddress = path;
+                                    storageAddress.Append(Key);
+                                    storageRoot!.Accept(visitor, nodeResolver.GetStorageTrieNodeResolver(storageAddress.Path.ToCommitment()), TreePath.Empty, trieVisitContext);
                                 }
                                 else
                                 {

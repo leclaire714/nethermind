@@ -365,35 +365,43 @@ namespace Nethermind.Trie.Pruning
         {
             keyValueStore ??= _keyValueStore;
             byte[]? rlp = keyValueStore.Get(GetNodeStoragePath(address, path, keccak), readFlags);
+            /*
             if (rlp == null)
             {
                 Console.Out.WriteLine($"Missing key was cached {KeyCached.Contains(new PruneKey(address, path, keccak))}");
                 Console.Out.WriteLine($"Missing key in cache {_dirtyNodes.IsNodeCached(new PruneKey(address, path, keccak))}");
                 Console.Out.WriteLine($"Missing key was removed {RemovedKey.GetValueOrDefault(new PruneKey(address, path, keccak), "not removed")}");
                 Console.Out.WriteLine($"Missing key was persisted {Persisted.Contains(new PruneKey(address, path, keccak))}");
-                MemDb mem = (MemDb)keyValueStore;
+
                 byte[] thePath = GetNodeStoragePath(address, path, keccak);
                 bool found = false;
-                foreach (byte[] memKey in mem.Keys)
-                {
-                    if (Bytes.EqualityComparer.Equals(thePath[..8], memKey[..8]))
-                    {
-                        Console.Out.WriteLine($"Found hash match {thePath} {memKey}");
-                        found = true;
-                    }
 
-                    if (Bytes.EqualityComparer.Equals(thePath[..8], memKey))
+                if (keyValueStore is IDb)
+                {
+                    IDb mem = (IDb)keyValueStore;
+                    foreach (var entry in mem.GetAll())
                     {
-                        Console.Out.WriteLine($"Found hash match direct {thePath} {memKey}");
-                        found = true;
+                        var memKey = entry.Key;
+                        if (Bytes.EqualityComparer.Equals(thePath[8..], memKey[8..]))
+                        {
+                            Console.Out.WriteLine($"Found hash match {thePath.ToHexString()} {memKey.ToHexString()}");
+                            found = true;
+                        }
+                        else
+                        if (Bytes.EqualityComparer.Equals(thePath[8..], memKey))
+                        {
+                            Console.Out.WriteLine($"Found hash match direct {thePath.ToHexString()} {memKey.ToHexString()}");
+                            found = true;
+                        }
                     }
                 }
 
                 if (!found)
                 {
-                    Console.Out.WriteLine($"No key match {address} {path} {thePath.ToHexString()}");
+                    Console.Out.WriteLine($"No key match {address} {path} {thePath[8..].ToHexString()} {thePath.ToHexString()}");
                 }
             }
+            */
 
             if (rlp is null)
             {
@@ -686,8 +694,7 @@ namespace Nethermind.Trie.Pruning
         /// <param name="commitSet">A commit set of a block which root is to be persisted.</param>
         private void Persist(Hash256? address, BlockCommitSet commitSet, WriteFlags writeFlags = WriteFlags.None)
         {
-            Console.Out.WriteLine($"Persist block commit set {address} {commitSet}");
-            void PersistNode(TrieNode tn, TreePath path) => Persist(address, path, tn, commitSet.BlockNumber, writeFlags);
+            void PersistNode(TrieNode tn, Hash256? address2, TreePath path) => Persist(address2, path, tn, commitSet.BlockNumber, writeFlags);
 
             try
             {
@@ -695,7 +702,7 @@ namespace Nethermind.Trie.Pruning
                 if (_logger.IsDebug) _logger.Debug($"Persisting from root {commitSet.Root} in {commitSet.BlockNumber}");
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                commitSet.Root?.CallRecursively(PersistNode, TreePath.Empty, GetTrieStore(address), true, _logger);
+                commitSet.Root?.CallRecursively(PersistNode, address, TreePath.Empty, GetTrieStore(address), true, _logger);
                 stopwatch.Stop();
                 Metrics.SnapshotPersistenceTime = stopwatch.ElapsedMilliseconds;
 
@@ -872,20 +879,17 @@ namespace Nethermind.Trie.Pruning
                 int persistedNodes = 0;
                 Stopwatch stopwatch = Stopwatch.StartNew();
 
-                void PersistNode(TrieNode n, TreePath path)
+                void PersistNode(TrieNode n, Hash256? address, TreePath path)
                 {
                     Hash256? hash = n.Keccak;
                     if (hash is not null)
                     {
-                        /*
-                        store.Set(hash, n.FullRlp);
+                        store.Set(GetNodeStoragePath(address, path, hash), n.FullRlp.ToArray());
                         int persistedNodesCount = Interlocked.Increment(ref persistedNodes);
                         if (_logger.IsInfo && persistedNodesCount % million == 0)
                         {
                             _logger.Info($"Full Pruning Persist Cache in progress: {stopwatch.Elapsed} {persistedNodesCount / million:N} mln nodes persisted.");
                         }
-                        */
-                        throw new Exception("Not working yet");
                     }
                 }
 
@@ -895,7 +899,7 @@ namespace Nethermind.Trie.Pruning
                 {
                     if (!cancellationToken.IsCancellationRequested)
                     {
-                        nodesCopy[i].Value.Item3.CallRecursively(PersistNode, nodesCopy[i].Value.Item2, this.GetTrieStore(nodesCopy[i].Value.Item1), false, _logger, false);
+                        nodesCopy[i].Value.Item3.CallRecursively(PersistNode, null, nodesCopy[i].Value.Item2, this.GetTrieStore(nodesCopy[i].Value.Item1), false, _logger, false);
                     }
                 });
 

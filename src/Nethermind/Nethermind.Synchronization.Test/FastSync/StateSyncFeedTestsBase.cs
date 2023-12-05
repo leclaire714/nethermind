@@ -11,6 +11,7 @@ using Nethermind.Blockchain;
 using Nethermind.Blockchain.Synchronization;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Core.Test;
 using Nethermind.Core.Test.Builders;
 using Nethermind.Core.Timers;
@@ -271,7 +272,23 @@ namespace Nethermind.Synchronization.Test.FastSync
                 {
                     if (i >= MaxResponseLength) break;
 
-                    if (_filter is null || _filter.Contains(item)) responses[i] = _stateDb[item.Bytes] ?? _codeDb[item.Bytes]!;
+                    if (_filter is null || _filter.Contains(item))
+                    {
+                        byte[]? response = _codeDb[item.Bytes];
+                        if (response == null)
+                        {
+                            // Hack through it
+                            foreach (KeyValuePair<byte[],byte[]?> keyValuePair in _stateDb.GetAll())
+                            {
+                                if (Bytes.AreEqual(item.Bytes, keyValuePair.Key.AsSpan()[8..]))
+                                {
+                                    response = keyValuePair.Value;
+                                    break;
+                                }
+                            }
+                        }
+                        responses[i] = response!;
+                    }
 
                     i++;
                 }

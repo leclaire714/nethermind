@@ -17,12 +17,16 @@ namespace Nethermind.State
     {
         private readonly IDb _codeDb;
         private readonly ILogger _logger;
+        private readonly ILogManager _logManager;
+        private readonly ITrieStore _trieStore;
         private readonly StateTree _state;
 
         public StateReader(ITrieStore? trieStore, IDb? codeDb, ILogManager? logManager)
         {
             _logger = logManager?.GetClassLogger<StateReader>() ?? throw new ArgumentNullException(nameof(logManager));
+            _logManager = logManager;
             _codeDb = codeDb ?? throw new ArgumentNullException(nameof(codeDb));
+            _trieStore = trieStore;
             _state = new StateTree(trieStore.GetTrieStore(null), logManager);
         }
 
@@ -31,19 +35,14 @@ namespace Nethermind.State
             return GetState(stateRoot, address);
         }
 
-        public byte[] GetStorage(Hash256 storageRoot, in UInt256 index)
+        public byte[] GetStorage(Hash256 stateRoot, Address address, in UInt256 index)
         {
-            /*
-            if (storageRoot == Keccak.EmptyTreeHash)
-            {
-                return new byte[] { 0 };
-            }
+            _state.RootHash = stateRoot;
+            Account? account = _state.Get(address);
+            if (account == null) return null;
 
-            Metrics.StorageTreeReads++;
-            _storage = new StorageTree(trieStore, Keccak.EmptyTreeHash, logManager);
-            return _storage.Get(index, storageRoot);
-            */
-            throw new Exception("Require address");
+            StorageTree storageTree = new StorageTree(_trieStore.GetTrieStore(address.ToAccountPath), account.StorageRoot, _logManager);
+            return storageTree.Get(index);
         }
 
         public UInt256 GetBalance(Hash256 stateRoot, Address address)

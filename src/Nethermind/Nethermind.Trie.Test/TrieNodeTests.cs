@@ -783,7 +783,7 @@ namespace Nethermind.Trie.Test
 
             trieNode.PrunePersistedRecursively(1);
             int count = 0;
-            trieNode.CallRecursively((n, p) => count++, TreePath.Empty, NullTrieStore.Instance, skipPersisted, LimboTraceLogger.Instance);
+            trieNode.CallRecursively((n, s,  p) => count++, null, TreePath.Empty, NullTrieStore.Instance, skipPersisted, LimboTraceLogger.Instance);
             count.Should().Be(1);
         }
 

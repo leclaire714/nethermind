@@ -58,7 +58,10 @@ namespace Nethermind.Synchronization.Test.FastSync
             dbContext.CompareTrees("BEFORE FIRST SYNC", true);
 
             SafeContext ctx = PrepareDownloader(dbContext, mock =>
-                mock.SetFilter(((MemDb)dbContext.RemoteStateDb).Keys.Take(((MemDb)dbContext.RemoteStateDb).Keys.Count - 4).Select(k => new Hash256(k)).ToArray()));
+                mock.SetFilter(((MemDb)dbContext.RemoteStateDb).Keys.Take(((MemDb)dbContext.RemoteStateDb).Keys.Count - 4).Select(k =>
+                {
+                    return HashKey(k);
+                }).ToArray()));
 
             await ActivateAndWait(ctx, dbContext, 1024);
 
@@ -105,6 +108,16 @@ namespace Nethermind.Synchronization.Test.FastSync
 
             dbContext.CompareTrees("END");
             dbContext.AssertFlushed();
+        }
+
+        private static Hash256 HashKey(byte[] k)
+        {
+            if (k.Length == 40)
+            {
+                return new Hash256(k[8..]);
+            }
+
+            return new Hash256(k);
         }
 
         [Test]
@@ -209,7 +222,7 @@ namespace Nethermind.Synchronization.Test.FastSync
             dbContext.CompareTrees("BEFORE FIRST SYNC");
 
             SafeContext ctx = PrepareDownloader(dbContext, mock =>
-                mock.SetFilter(((MemDb)dbContext.RemoteStateDb).Keys.Take(((MemDb)dbContext.RemoteStateDb).Keys.Count - 1).Select(k => new Hash256(k)).ToArray()));
+                mock.SetFilter(((MemDb)dbContext.RemoteStateDb).Keys.Take(((MemDb)dbContext.RemoteStateDb).Keys.Count - 1).Select(k => HashKey(k)).ToArray()));
             await ActivateAndWait(ctx, dbContext, 1024, 1000);
 
 

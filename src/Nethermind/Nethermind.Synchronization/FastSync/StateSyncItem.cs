@@ -57,7 +57,7 @@ namespace Nethermind.Synchronization.FastSync
 
         public bool IsRoot => Level == 0 && NodeDataType == NodeDataType.State;
 
-        public (Hash256 account, TreePath path) StorageRootAndPath {
+        public (Hash256 account, TreePath path) AddressAndPath {
 
             get
             {
@@ -71,5 +71,16 @@ namespace Nethermind.Synchronization.FastSync
                 return (account, path);
             }
         }
+
+        public NodeKey Key
+        {
+            get
+            {
+                (Hash256 account, TreePath path) = AddressAndPath;
+                return new NodeKey(account, path, Hash);
+            }
+        }
     }
+
+    public record NodeKey(Hash256? Address, TreePath? Path, Hash256 Hash);
 }
