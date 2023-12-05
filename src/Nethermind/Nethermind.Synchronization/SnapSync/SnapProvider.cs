@@ -344,9 +344,7 @@ namespace Nethermind.Synchronization.SnapSync
 
             public bool Return(ITrieStore obj)
             {
-                // There seems to be a memory leak
-                // return true;
-                return false;
+                return true;
             }
         }
     }

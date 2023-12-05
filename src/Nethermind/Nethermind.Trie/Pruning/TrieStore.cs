@@ -260,8 +260,6 @@ namespace Nethermind.Trie.Pruning
             }
         }
 
-        private HashSet<PruneKey> KeyCached = new HashSet<PruneKey>();
-
         private TrieNode SaveOrReplaceInDirtyNodesCache(Hash256? address, NodeCommitInfo nodeCommitInfo, TrieNode node)
         {
             if (_pruningStrategy.PruningEnabled)
@@ -289,7 +287,6 @@ namespace Nethermind.Trie.Pruning
                 }
                 else
                 {
-                    KeyCached.Add(new PruneKey(address, nodeCommitInfo.Path, node.Keccak));
                     _dirtyNodes.SaveInCache(address, nodeCommitInfo.Path, node);
                 }
             }
@@ -721,8 +718,6 @@ namespace Nethermind.Trie.Pruning
             PruneCurrentSet();
         }
 
-        private HashSet<PruneKey> Persisted = new HashSet<PruneKey>();
-
         private void Persist(Hash256? address, TreePath path, TrieNode currentNode, long blockNumber, WriteFlags writeFlags = WriteFlags.None)
         {
             _currentBatch ??= _keyValueStore.StartWriteBatch();
@@ -740,7 +735,6 @@ namespace Nethermind.Trie.Pruning
                 // to prevent it from being removed from cache and also want to have it persisted.
 
                 if (_logger.IsTrace) _logger.Trace($"Persisting {nameof(TrieNode)} {currentNode} in snapshot {blockNumber}.");
-                Persisted.Add(new PruneKey(address, path, currentNode.Keccak));
                 _currentBatch.Set(GetNodeStoragePath(address, path, currentNode.Keccak), currentNode.FullRlp.ToArray(), writeFlags);
                 currentNode.IsPersisted = true;
                 currentNode.LastSeen = Math.Max(blockNumber, currentNode.LastSeen ?? 0);
