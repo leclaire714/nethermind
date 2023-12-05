@@ -1122,6 +1122,7 @@ namespace Nethermind.Trie
             }
 
             visitor.VisitTree(rootHash, trieVisitContext);
+            /*
             if (visitingOptions.FullScanMemoryBudget != 0)
             {
                 BatchedTrieVisitor batchedTrieVisitor = new(visitor, resolver, visitingOptions);
@@ -1131,6 +1132,8 @@ namespace Nethermind.Trie
             {
                 rootRef?.Accept(visitor, resolver, TreePath.Empty, trieVisitContext);
             }
+            */
+            rootRef?.Accept(visitor, resolver, TreePath.Empty, trieVisitContext);
         }
 
         [DoesNotReturn]
